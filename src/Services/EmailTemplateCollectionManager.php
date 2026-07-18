@@ -85,6 +85,9 @@ class EmailTemplateCollectionManager
                 [
                     'label' => __('email-templates::email_templates.live_preview_target'),
                     'format' => $target,
+                    // Statamic's Collection reads this key unconditionally; omitting
+                    // it throws "Undefined array key 'refresh'" when the entry loads.
+                    'refresh' => true,
                 ],
             ]);
             $needsSave = true;
