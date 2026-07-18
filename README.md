@@ -29,26 +29,26 @@ Simple transactional templates round-trip cleanly; heavily styled marketing HTML
 may lose styling. If pixel-fidelity for complex templates is required, consider
 `save_html: true` on the Bard field or a dedicated raw-HTML fallback field.
 
-## CP preview
+## Live Preview
 
-A **Vorschau** (Preview) entry action appears in the `email_templates` listing
-row menu and the entry publish form; it opens the preview page for that
-template. The page is also reachable from the nav (Content → E-Mail-Vorlagen →
-Vorschau).
+The addon uses Statamic's **native Live Preview** (split-screen, live-as-you-type)
+directly in the entry publish form. No separate preview page.
 
-The preview renders through the exact same path as a real send —
-`EmailTemplateResolver` → `BardHtmlRenderer` (Bard → HTML) → merge-variable
-substitution — and shows the merged subject plus the HTML body in a **sandboxed
-iframe** (`sandbox="allow-same-origin"`, no script execution) so email markup is
-isolated from the CP.
+It is wired via two pieces set up automatically on boot:
 
-### Preview endpoint
+- The `et_templates` collection gets a **preview target** pointing at a custom
+  render route (`EmailTemplateCollectionManager::LIVE_PREVIEW_ROUTE`).
+- Because the collection has no front-end route (email templates are not public
+  pages), entries are instantiated as `EmailTemplateEntry`, which overrides
+  `livePreviewUrl()` so the native Live Preview button still appears.
 
-- `GET  cp/email-templates/preview/{id?}` — the preview page.
-- `POST cp/email-templates/preview` — JSON render. Body: `template` (slug) **or**
-  `id` (entry id), plus optional `merge_data` (overrides the sample set). Returns
-  `{ slug, title, subject, body, source, merge_data }`. Both routes are CP-auth
-  protected.
+The render route (`GET /email-templates/live-preview`) resolves the live-edited,
+unsaved entry from the Live Preview token
+(`LivePreview::item($request->statamicToken())`) and renders it through the exact
+same path as a real send — `BardHtmlRenderer` (Bard → HTML) → merge-variable
+substitution — returning the merged subject and HTML body as the iframe contents.
+The body only renders for a valid, short-lived Live Preview token; otherwise a
+neutral placeholder is shown.
 
 ### Merge variables
 

@@ -2,12 +2,10 @@
 
 namespace Goldnead\EmailTemplates;
 
-use Goldnead\EmailTemplates\Actions\PreviewEmailTemplate;
 use Goldnead\EmailTemplates\Console\ImportEmailTemplatesCommand;
 use Goldnead\EmailTemplates\Services\EmailTemplateCollectionManager;
 use Goldnead\EmailTemplates\Services\EmailTemplateResolver;
 use Goldnead\EmailTemplates\Support\MarketingEmailTemplateSource;
-use Illuminate\Support\Facades\Route;
 use Statamic\Facades\CP\Nav;
 use Statamic\Providers\AddonServiceProvider;
 
@@ -31,12 +29,12 @@ class EmailTemplatesServiceProvider extends AddonServiceProvider
     ];
 
     /**
-     * CP routes for the preview page + JSON render endpoint. Statamic mounts
-     * these under the `/cp` prefix and `statamic.cp.` name prefix, inside the
-     * authenticated CP middleware group.
+     * Front-end route that renders the native Live Preview iframe contents.
+     * Statamic mounts it at the site root, just before the catch-all frontend
+     * route, so the specific path always wins.
      */
     protected $routes = [
-        'cp' => __DIR__.'/../routes/cp.php',
+        'web' => __DIR__.'/../routes/web.php',
     ];
 
     public function register(): void
@@ -60,14 +58,12 @@ class EmailTemplatesServiceProvider extends AddonServiceProvider
     public function bootAddon(): void
     {
         $this->loadTranslationsFrom(__DIR__.'/../resources/lang', 'email-templates');
-        $this->loadViewsFrom(__DIR__.'/../resources/views', 'email-templates');
 
         $this->publishes([
             __DIR__.'/../config/email-templates.php' => config_path('email-templates.php'),
         ], 'email-templates-config');
 
         $this->ensureCollection();
-        $this->registerActions();
         $this->registerNavigation();
     }
 
@@ -91,19 +87,6 @@ class EmailTemplatesServiceProvider extends AddonServiceProvider
         }
     }
 
-    /**
-     * Register the "Vorschau" entry action so a preview button appears in the
-     * email_templates listing row menu and the entry publish form.
-     */
-    protected function registerActions(): void
-    {
-        if (! config('email-templates.enabled', true)) {
-            return;
-        }
-
-        PreviewEmailTemplate::register();
-    }
-
     protected function registerNavigation(): void
     {
         if (! config('email-templates.enabled', true)) {
@@ -111,16 +94,10 @@ class EmailTemplatesServiceProvider extends AddonServiceProvider
         }
 
         Nav::extend(function ($nav) {
-            $item = $nav->content(__('email-templates::nav.email_templates'))
+            $nav->content(__('email-templates::nav.email_templates'))
                 ->section('Content')
                 ->icon('mail')
                 ->url(cp_route('collections.show', EmailTemplateCollectionManager::HANDLE));
-
-            if (Route::has('statamic.cp.email-templates.preview')) {
-                $item->children([
-                    __('email-templates::nav.preview') => cp_route('email-templates.preview'),
-                ]);
-            }
         });
     }
 }

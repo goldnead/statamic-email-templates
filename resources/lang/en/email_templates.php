@@ -13,4 +13,6 @@ return [
     'field_plain_text_instructions' => 'Optional plain-text alternative for clients that do not render HTML.',
     'field_description' => 'Description',
     'field_description_instructions' => 'Internal note. Not sent to recipients.',
+    'live_preview_target' => 'Email',
+    'live_preview_empty' => 'No live preview available. Open the preview while editing a template.',
 ];

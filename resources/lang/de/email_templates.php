@@ -13,4 +13,6 @@ return [
     'field_plain_text_instructions' => 'Optionale Nur-Text-Variante für Clients, die kein HTML darstellen.',
     'field_description' => 'Beschreibung',
     'field_description_instructions' => 'Interne Notiz. Wird nicht an Empfänger gesendet.',
+    'live_preview_target' => 'E-Mail',
+    'live_preview_empty' => 'Keine Live-Vorschau verfügbar. Öffne die Vorschau aus der Bearbeitung einer Vorlage.',
 ];

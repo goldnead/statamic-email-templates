@@ -49,16 +49,14 @@ abstract class TestCase extends OrchestraTestCase
     }
 
     /**
-     * Statamic registers addon CP routes inside Statamic::booted callbacks that
-     * orchestra/testbench never fires. Mount them under the production `/cp`
-     * URL prefix and `statamic.cp.` name prefix so `cp_route('email-templates.*')`
-     * resolves exactly as it does in a real Control Panel.
+     * Statamic registers addon web routes inside Statamic::booted callbacks that
+     * orchestra/testbench never fires. Mount the Live Preview render route at
+     * the site root (as Statamic does in production) so `/email-templates/
+     * live-preview` resolves in feature tests.
      */
     protected function defineRoutes($router): void
     {
-        $router->name('statamic.cp.')
-            ->prefix('cp')
-            ->group(__DIR__.'/../routes/cp.php');
+        $router->middleware('web')->group(__DIR__.'/../routes/web.php');
     }
 
     /** Create and authenticate a Statamic super user for CP feature tests. */

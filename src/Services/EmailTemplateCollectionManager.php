@@ -2,6 +2,7 @@
 
 namespace Goldnead\EmailTemplates\Services;
 
+use Goldnead\EmailTemplates\Entries\EmailTemplateEntry;
 use Goldnead\EmailTemplates\Support\EmailTemplateBlueprint;
 use Goldnead\EmailTemplates\Support\EmailTemplateData;
 use Goldnead\EmailTemplates\Support\HtmlToBard;
@@ -30,23 +31,60 @@ class EmailTemplateCollectionManager
     // import, marketing) derives from here.
     public const HANDLE = 'et_templates';
 
+    // Front-end route (routes/web.php) that renders the Live Preview iframe
+    // contents. Referenced as the collection's preview target so the native CP
+    // Live Preview split-screen shows the real email HTML.
+    public const LIVE_PREVIEW_ROUTE = 'email-templates/live-preview';
+
     public function __construct(
         protected HtmlToBard $htmlToBard,
     ) {
     }
 
     /**
-     * Ensure the collection and its blueprint exist. Idempotent and cheap to
-     * call on every boot — both writes are skipped once present.
+     * Ensure the collection, its blueprint and its Live Preview wiring exist.
+     * Idempotent and cheap to call on every boot — the collection is only
+     * (re)written when something is actually missing.
      */
     public function ensure(): void
     {
-        if (! Collection::findByHandle(self::HANDLE)) {
-            Collection::make(self::HANDLE)
+        $collection = Collection::findByHandle(self::HANDLE);
+        $needsSave = false;
+
+        if (! $collection) {
+            $collection = Collection::make(self::HANDLE)
                 ->title(__('email-templates::email_templates.collection_title'))
                 ->routes(null)
-                ->revisionsEnabled(false)
-                ->save();
+                ->revisionsEnabled(false);
+            $needsSave = true;
+        }
+
+        // Re-instantiate entries as EmailTemplateEntry so the native Live
+        // Preview button appears even though this collection has no route.
+        if ($collection->entryClass() !== EmailTemplateEntry::class) {
+            $collection->entryClass(EmailTemplateEntry::class);
+            $needsSave = true;
+        }
+
+        // Point Live Preview at our custom render route (the rendered email),
+        // not a front-end page. Guarded so boot stays cheap once applied.
+        $target = '/'.self::LIVE_PREVIEW_ROUTE;
+
+        $hasTarget = $collection->previewTargets()
+            ->contains(fn ($t) => ($t['format'] ?? null) === $target);
+
+        if (! $hasTarget) {
+            $collection->previewTargets([
+                [
+                    'label' => __('email-templates::email_templates.live_preview_target'),
+                    'format' => $target,
+                ],
+            ]);
+            $needsSave = true;
+        }
+
+        if ($needsSave) {
+            $collection->save();
         }
 
         if (! Blueprint::find(EmailTemplateBlueprint::NAMESPACE.'.'.EmailTemplateBlueprint::HANDLE)) {
