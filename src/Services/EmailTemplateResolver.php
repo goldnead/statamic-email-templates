@@ -3,6 +3,7 @@
 namespace Goldnead\EmailTemplates\Services;
 
 use Goldnead\EmailTemplates\Support\BardHtmlRenderer;
+use Goldnead\EmailTemplates\Support\BrandedBodyRenderer;
 use Goldnead\EmailTemplates\Support\EmailTemplateData;
 use Statamic\Contracts\Entries\Entry as EntryContract;
 
@@ -33,6 +34,30 @@ class EmailTemplateResolver
      * @param  (callable(string):(EmailTemplateData|array<string,mixed>|null))|null  $fallback
      */
     public function resolve(string $slug, ?callable $fallback = null): ?EmailTemplateData
+    {
+        $data = $this->lookup($slug, $fallback);
+
+        if ($data === null) {
+            return null;
+        }
+
+        // Wrap the resolved body in the host app's branded email shell when a
+        // `email-templates.branded_layout` is configured. No-op (returns the
+        // raw body) otherwise, so this stays a pure opt-in. Applied here so
+        // every consumer of the resolver — the automations send action above
+        // all — sends the branded HTML, matching the CP Live Preview exactly.
+        $data->body = BrandedBodyRenderer::wrap($data->body, $data->subject);
+
+        return $data;
+    }
+
+    /**
+     * Resolve the raw (un-branded) template data: managed entry wins, else the
+     * caller-supplied fallback.
+     *
+     * @param  (callable(string):(EmailTemplateData|array<string,mixed>|null))|null  $fallback
+     */
+    protected function lookup(string $slug, ?callable $fallback): ?EmailTemplateData
     {
         $entry = $this->collection->findBySlug($slug);
 

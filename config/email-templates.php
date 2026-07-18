@@ -17,6 +17,25 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Branded layout
+    |--------------------------------------------------------------------------
+    |
+    | Optional. The name of a host-app Blade layout that wraps every rendered
+    | template body in the app's branded email shell (header / footer / styling).
+    | The layout must expose a `@yield('content')` section; the rendered body is
+    | injected there and the subject is passed as `$title`.
+    |
+    | Default `null` keeps the addon marketplace-generic: bodies render raw, as
+    | before. A host app opts in by pointing this at one of its own layouts,
+    | e.g. adriangoldner.com sets it to `emails.layout`. Applies to BOTH the CP
+    | Live Preview and every real send (they share one render path).
+    |
+    */
+
+    'branded_layout' => null,
+
+    /*
+    |--------------------------------------------------------------------------
     | Preview
     |--------------------------------------------------------------------------
     |

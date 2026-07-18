@@ -58,6 +58,7 @@ class EmailTemplatesServiceProvider extends AddonServiceProvider
     public function bootAddon(): void
     {
         $this->loadTranslationsFrom(__DIR__.'/../resources/lang', 'email-templates');
+        $this->loadViewsFrom(__DIR__.'/../resources/views', 'email-templates');
 
         $this->publishes([
             __DIR__.'/../config/email-templates.php' => config_path('email-templates.php'),
