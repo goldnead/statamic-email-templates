@@ -2,7 +2,6 @@
 
 namespace Goldnead\EmailTemplates\Services;
 
-use Goldnead\EmailTemplates\Entries\EmailTemplateEntry;
 use Goldnead\EmailTemplates\Support\EmailTemplateBlueprint;
 use Goldnead\EmailTemplates\Support\EmailTemplateData;
 use Goldnead\EmailTemplates\Support\HtmlToBard;
@@ -10,6 +9,7 @@ use Statamic\Contracts\Entries\Entry as EntryContract;
 use Statamic\Facades\Blueprint;
 use Statamic\Facades\Collection;
 use Statamic\Facades\Entry;
+use Statamic\Facades\Site;
 
 /**
  * Owns the native Statamic `et_templates` collection: creating it (and its
@@ -36,6 +36,12 @@ class EmailTemplateCollectionManager
     // Live Preview split-screen shows the real email HTML.
     public const LIVE_PREVIEW_ROUTE = 'email-templates/live-preview';
 
+    // Internal front-end route pattern. Its ONLY purpose is to satisfy Statamic's
+    // `Entry::livePreviewUrl()` gate (returns null unless collection->route() is
+    // set), so the native Live Preview button appears. Real front-end visits find
+    // no template and 404; the split-screen renders via LIVE_PREVIEW_ROUTE.
+    public const FRONTEND_ROUTE = '_email-template-preview/{slug}';
+
     public function __construct(
         protected HtmlToBard $htmlToBard,
     ) {
@@ -54,15 +60,16 @@ class EmailTemplateCollectionManager
         if (! $collection) {
             $collection = Collection::make(self::HANDLE)
                 ->title(__('email-templates::email_templates.collection_title'))
-                ->routes(null)
                 ->revisionsEnabled(false);
             $needsSave = true;
         }
 
-        // Re-instantiate entries as EmailTemplateEntry so the native Live
-        // Preview button appears even though this collection has no route.
-        if ($collection->entryClass() !== EmailTemplateEntry::class) {
-            $collection->entryClass(EmailTemplateEntry::class);
+        // Give the collection a route so Statamic's native Live Preview button
+        // appears (Entry::livePreviewUrl() is gated on collection->route()).
+        // This is an internal gate only — real front-end visits 404; the actual
+        // split-screen renders via the preview target below.
+        if (! $collection->route(Site::default()->handle())) {
+            $collection->routes(self::FRONTEND_ROUTE);
             $needsSave = true;
         }
 
