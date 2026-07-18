@@ -93,6 +93,13 @@ class EmailTemplateCollectionManager
             $needsSave = true;
         }
 
+        // Email templates are not web pages — opt out of SEO Pro's injected
+        // SEO tabs/fields (SEO Pro checks the collection cascade for `seo`).
+        if ($collection->cascade('seo') !== false) {
+            $collection->cascade(array_merge($collection->cascade()->all(), ['seo' => false]));
+            $needsSave = true;
+        }
+
         if ($needsSave) {
             $collection->save();
         }
