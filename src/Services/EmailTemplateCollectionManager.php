@@ -11,7 +11,7 @@ use Statamic\Facades\Collection;
 use Statamic\Facades\Entry;
 
 /**
- * Owns the native Statamic `email_templates` collection: creating it (and its
+ * Owns the native Statamic `et_templates` collection: creating it (and its
  * blueprint) if absent, and reading/writing template entries by slug.
  *
  * The collection is a first-class Statamic collection, so it shows up in the
@@ -23,7 +23,12 @@ use Statamic\Facades\Entry;
  */
 class EmailTemplateCollectionManager
 {
-    public const HANDLE = 'email_templates';
+    // Own, collision-free handle: a host app (e.g. adriangoldner.com) may already
+    // run an unrelated `email_templates` collection with a different blueprint.
+    // This addon owns `et_templates`. Single source of truth for the handle —
+    // every other reference (blueprint namespace, nav route, resolver, preview,
+    // import, marketing) derives from here.
+    public const HANDLE = 'et_templates';
 
     public function __construct(
         protected HtmlToBard $htmlToBard,

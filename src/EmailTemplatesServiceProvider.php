@@ -14,7 +14,7 @@ use Statamic\Providers\AddonServiceProvider;
 /**
  * Service provider for the Email Templates addon.
  *
- * Owns the shared, CP-native `email_templates` collection: it ensures the
+ * Owns the shared, CP-native `et_templates` collection: it ensures the
  * collection + blueprint exist, registers the import command, the resolver
  * (exposed publicly via the EmailTemplates facade) and a CP nav entry that
  * points at the native collection listing.

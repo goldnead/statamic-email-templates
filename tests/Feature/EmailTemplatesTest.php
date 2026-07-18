@@ -13,7 +13,7 @@ use Statamic\Facades\Collection;
 // The collections/entries Stache is redirected to a per-process temp dir that
 // persists across tests in a run, so clear any leftover entries up front.
 beforeEach(function () {
-    Collection::findByHandle('email_templates')?->queryEntries()->get()->each->delete();
+    Collection::findByHandle(EmailTemplateCollectionManager::HANDLE)?->queryEntries()->get()->each->delete();
 });
 
 /** An in-memory template source for exercising the import command. */
@@ -45,8 +45,8 @@ function registerFakeSource(EmailTemplateSource $source): void
 
 // -- Slice 1: collection + blueprint + entry CRUD -------------------------
 
-it('registers the email_templates collection and its blueprint', function () {
-    expect(Collection::findByHandle('email_templates'))->not->toBeNull();
+it('registers the et_templates collection and its blueprint', function () {
+    expect(Collection::findByHandle(EmailTemplateCollectionManager::HANDLE))->not->toBeNull();
 
     $blueprint = Blueprint::find(
         EmailTemplateBlueprint::NAMESPACE.'.'.EmailTemplateBlueprint::HANDLE

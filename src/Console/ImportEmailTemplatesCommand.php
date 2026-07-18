@@ -20,7 +20,7 @@ class ImportEmailTemplatesCommand extends Command
         {--overwrite : Overwrite entries whose slug already exists}
         {--source= : Only import from a single source (matched against its label)}';
 
-    protected $description = 'Import file-based email templates from sibling addons into the email_templates collection.';
+    protected $description = 'Import file-based email templates from sibling addons into the et_templates collection.';
 
     public function handle(EmailTemplateCollectionManager $collection): int
     {

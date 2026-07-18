@@ -2,6 +2,7 @@
 
 namespace Goldnead\EmailTemplates\Support;
 
+use Goldnead\EmailTemplates\Services\EmailTemplateCollectionManager;
 use Statamic\Facades\Blueprint;
 use Statamic\Fields\Blueprint as BlueprintInstance;
 
@@ -18,7 +19,9 @@ class EmailTemplateBlueprint
 {
     public const HANDLE = 'email_template';
 
-    public const NAMESPACE = 'collections.email_templates';
+    // A Statamic collection's blueprints live under `collections.<handle>`, so
+    // derive the namespace from the single handle constant — never hard-code it.
+    public const NAMESPACE = 'collections.'.EmailTemplateCollectionManager::HANDLE;
 
     public static function make(): BlueprintInstance
     {

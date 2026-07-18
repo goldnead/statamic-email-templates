@@ -8,7 +8,7 @@ use Statamic\Facades\Collection;
 // The collections/entries Stache is redirected to a per-process temp dir that
 // persists across tests in a run, so clear any leftover entries up front.
 beforeEach(function () {
-    Collection::findByHandle('email_templates')?->queryEntries()->get()->each->delete();
+    Collection::findByHandle(EmailTemplateCollectionManager::HANDLE)?->queryEntries()->get()->each->delete();
 });
 
 // -- Slice 5: merge-variable substitution --------------------------------
@@ -84,7 +84,7 @@ it('returns 404 for an unknown template slug', function () {
         ->assertNotFound();
 });
 
-it('returns 404 for an id outside the email_templates collection', function () {
+it('returns 404 for an id outside the et_templates collection', function () {
     $this->actingAsSuperUser();
 
     $this->postJson(cp_route('email-templates.preview.render'), ['id' => 'nope-123'])
