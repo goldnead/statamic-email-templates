@@ -30,7 +30,13 @@ class HtmlToBard
 
         try {
             if (class_exists(\Tiptap\Editor::class)) {
-                $doc = (new \Tiptap\Editor)->setContent($html)->getDocument();
+                $doc = (new \Tiptap\Editor([
+                    'extensions' => [
+                        new \Tiptap\Extensions\StarterKit,
+                        new \Tiptap\Marks\Link,
+                        new \Tiptap\Marks\Underline,
+                    ],
+                ]))->setContent($html)->getDocument();
 
                 if (is_array($doc) && isset($doc['content']) && is_array($doc['content'])) {
                     return $doc['content'];

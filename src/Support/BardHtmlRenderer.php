@@ -48,7 +48,13 @@ class BardHtmlRenderer
                     ? $value
                     : ['type' => 'doc', 'content' => $value];
 
-                return (string) (new \Tiptap\Editor)->setContent($doc)->getHTML();
+                return (string) (new \Tiptap\Editor([
+                    'extensions' => [
+                        new \Tiptap\Extensions\StarterKit,
+                        new \Tiptap\Marks\Link,
+                        new \Tiptap\Marks\Underline,
+                    ],
+                ]))->setContent($doc)->getHTML();
             }
         } catch (\Throwable $e) {
             // fall through to the Statamic augmentor
