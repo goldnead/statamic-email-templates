@@ -48,12 +48,14 @@ class EmailTemplateResolver
         // like the subject — no separate preheader-only code path.
         $data->body = EmailPreheader::prepend($data->body, $data->preview);
 
-        // Wrap the resolved body in the host app's branded email shell when a
-        // `email-templates.branded_layout` is configured. No-op (returns the
-        // raw body) otherwise, so this stays a pure opt-in. Applied here so
-        // every consumer of the resolver — the automations send action above
-        // all — sends the branded HTML, matching the CP Live Preview exactly.
-        $data->body = BrandedBodyRenderer::wrap($data->body, $data->subject);
+        // Wrap the resolved body in the layout this entry chose (its `layout`
+        // handle → view via LayoutResolver, falling back to `default_layout`
+        // and finally the single `branded_layout`). No-op (returns the raw
+        // body) when nothing usable resolves, so this stays a pure opt-in.
+        // Applied here so every consumer of the resolver — the automations send
+        // action above all — sends the branded HTML, matching the CP Live
+        // Preview exactly.
+        $data->body = BrandedBodyRenderer::wrap($data->body, $data->subject, $data->layout);
 
         return $data;
     }
@@ -102,6 +104,7 @@ class EmailTemplateResolver
             body: $this->renderer->render($entry->value('body')),
             plainText: $entry->value('plain_text') !== null ? (string) $entry->value('plain_text') : null,
             description: $entry->value('description') !== null ? (string) $entry->value('description') : null,
+            layout: $entry->value('layout') !== null && (string) $entry->value('layout') !== '' ? (string) $entry->value('layout') : null,
             source: 'entry',
         );
     }

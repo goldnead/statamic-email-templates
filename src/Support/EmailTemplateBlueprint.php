@@ -3,6 +3,7 @@
 namespace Goldnead\EmailTemplates\Support;
 
 use Goldnead\EmailTemplates\Services\EmailTemplateCollectionManager;
+use Illuminate\Support\Str;
 use Statamic\Facades\Blueprint;
 use Statamic\Fields\Blueprint as BlueprintInstance;
 
@@ -64,6 +65,18 @@ class EmailTemplateBlueprint
                                         ],
                                     ],
                                     [
+                                        'handle' => 'layout',
+                                        'field' => [
+                                            'type' => 'select',
+                                            'display' => __('email-templates::email_templates.field_layout'),
+                                            'instructions' => __('email-templates::email_templates.field_layout_instructions'),
+                                            'options' => self::layoutOptions(),
+                                            'clearable' => true,
+                                            'placeholder' => __('email-templates::email_templates.field_layout_default'),
+                                            'localizable' => false,
+                                        ],
+                                    ],
+                                    [
                                         'handle' => 'body',
                                         'field' => [
                                             'type' => 'bard',
@@ -102,5 +115,33 @@ class EmailTemplateBlueprint
                     ],
                 ],
             ]);
+    }
+
+    /**
+     * Select options for the `layout` field: one entry per configured
+     * `email-templates.layouts` handle, labelled with a readable form of the
+     * handle. Empty when no layouts are configured — the field then renders
+     * with just its "Default" placeholder, never crashing.
+     *
+     * @return array<string,string>
+     */
+    protected static function layoutOptions(): array
+    {
+        $layouts = config('email-templates.layouts');
+        $layouts = is_array($layouts) ? $layouts : [];
+
+        $options = [];
+
+        foreach (array_keys($layouts) as $handle) {
+            $handle = (string) $handle;
+
+            if ($handle === '') {
+                continue;
+            }
+
+            $options[$handle] = Str::headline($handle);
+        }
+
+        return $options;
     }
 }

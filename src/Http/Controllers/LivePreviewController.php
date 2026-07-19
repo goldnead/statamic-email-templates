@@ -58,12 +58,17 @@ class LivePreviewController extends Controller
         // and real send producing identical HTML.
         $bodyHtml = EmailPreheader::prepend($bodyHtml, $preview);
 
-        // When a branded layout is configured, the wrapped body is already a
-        // complete branded HTML document — return it verbatim so the split-screen
-        // shows exactly what a recipient receives. Otherwise fall back to the
-        // lean generic preview document.
-        if (BrandedBodyRenderer::enabled()) {
-            return response(BrandedBodyRenderer::wrap($bodyHtml, $subject))
+        // When a layout resolves for this entry's `layout` choice (its own
+        // handle, else the default_layout, else branded_layout), the wrapped
+        // body is already a complete branded HTML document — return it verbatim
+        // so the split-screen shows exactly what a recipient receives. Otherwise
+        // fall back to the lean generic preview document.
+        $layoutHandle = $entry->value('layout') !== null && (string) $entry->value('layout') !== ''
+            ? (string) $entry->value('layout')
+            : null;
+
+        if (BrandedBodyRenderer::enabledFor($layoutHandle)) {
+            return response(BrandedBodyRenderer::wrap($bodyHtml, $subject, $layoutHandle))
                 ->header('Content-Type', 'text/html; charset=utf-8');
         }
 

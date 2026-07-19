@@ -24,6 +24,7 @@ class EmailTemplateData
         public string $body = '',
         public ?string $plainText = null,
         public ?string $description = null,
+        public ?string $layout = null,
         public string $source = 'entry',
     ) {
     }
@@ -44,6 +45,7 @@ class EmailTemplateData
             body: (string) ($data['body'] ?? $data['html'] ?? ''),
             plainText: isset($data['plain_text']) ? (string) $data['plain_text'] : null,
             description: isset($data['description']) ? (string) $data['description'] : null,
+            layout: isset($data['layout']) && (string) $data['layout'] !== '' ? (string) $data['layout'] : null,
             source: (string) ($data['source'] ?? 'entry'),
         );
     }
@@ -63,6 +65,7 @@ class EmailTemplateData
             'preview' => $this->preview,
             'plain_text' => $this->plainText,
             'description' => $this->description,
+            'layout' => $this->layout,
         ], fn ($value) => $value !== null);
     }
 
@@ -79,6 +82,7 @@ class EmailTemplateData
             'body' => $this->body,
             'plain_text' => $this->plainText,
             'description' => $this->description,
+            'layout' => $this->layout,
             'source' => $this->source,
         ];
     }

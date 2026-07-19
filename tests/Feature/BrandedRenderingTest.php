@@ -73,6 +73,81 @@ it('also brands the inline fallback body when a slug does not resolve', function
         ->toContain('BRAND FOOTER');
 });
 
+it('wraps the send body in the per-entry chosen layout', function () {
+    // Map a `transactional` handle to its own shell fixture.
+    config()->set('email-templates.layouts', [
+        'transactional' => 'testbrand::transactional',
+    ]);
+
+    app(EmailTemplateCollectionManager::class)->upsert(new EmailTemplateData(
+        slug: 'receipt',
+        title: 'Receipt',
+        subject: 'Deine Quittung',
+        body: '<p>Danke für deinen Kauf.</p>',
+        layout: 'transactional',
+    ));
+
+    $resolved = app(EmailTemplateResolver::class)->resolve('receipt');
+
+    expect($resolved)->not->toBeNull();
+    expect($resolved->layout)->toBe('transactional');
+    // Wrapped in the transactional shell, NOT the default branded shell.
+    expect($resolved->body)
+        ->toContain('TRANSACTIONAL HEADER')
+        ->toContain('Danke für deinen Kauf.')
+        ->toContain('TRANSACTIONAL FOOTER')
+        ->not->toContain('BRAND HEADER');
+});
+
+it('falls back to the branded layout when an entry picks no layout', function () {
+    config()->set('email-templates.layouts', [
+        'transactional' => 'testbrand::transactional',
+    ]);
+
+    app(EmailTemplateCollectionManager::class)->upsert(new EmailTemplateData(
+        slug: 'welcome',
+        title: 'Welcome',
+        subject: 'Willkommen',
+        body: '<p>Schön dass du da bist.</p>',
+        // no layout chosen
+    ));
+
+    $resolved = app(EmailTemplateResolver::class)->resolve('welcome');
+
+    expect($resolved)->not->toBeNull();
+    expect($resolved->layout)->toBeNull();
+    // Historic behaviour unchanged: the single branded_layout wraps it.
+    expect($resolved->body)
+        ->toContain('BRAND HEADER')
+        ->toContain('Schön dass du da bist.')
+        ->toContain('BRAND FOOTER')
+        ->not->toContain('TRANSACTIONAL HEADER');
+});
+
+it('falls back to the branded layout for an unknown layout handle', function () {
+    config()->set('email-templates.layouts', [
+        'transactional' => 'testbrand::transactional',
+    ]);
+
+    app(EmailTemplateCollectionManager::class)->upsert(new EmailTemplateData(
+        slug: 'newsletter',
+        title: 'Newsletter',
+        subject: 'Neuigkeiten',
+        body: '<p>Frische Neuigkeiten.</p>',
+        layout: 'does-not-exist',
+    ));
+
+    $resolved = app(EmailTemplateResolver::class)->resolve('newsletter');
+
+    expect($resolved)->not->toBeNull();
+    // Unknown handle → branded_layout fallback, nothing breaks.
+    expect($resolved->body)
+        ->toContain('BRAND HEADER')
+        ->toContain('Frische Neuigkeiten.')
+        ->toContain('BRAND FOOTER')
+        ->not->toContain('TRANSACTIONAL HEADER');
+});
+
 it('renders the branded shell in the live preview when configured', function () {
     [$entry] = app(EmailTemplateCollectionManager::class)->upsert(new EmailTemplateData(
         slug: 'welcome',

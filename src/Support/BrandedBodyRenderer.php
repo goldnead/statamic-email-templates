@@ -33,26 +33,49 @@ class BrandedBodyRenderer
         return is_string($layout) && trim($layout) !== '' ? $layout : null;
     }
 
-    /** Whether a usable branded layout is configured (set AND the view exists). */
-    public static function enabled(): bool
+    /**
+     * The Blade view that wraps an entry with the given `layout` handle, per
+     * {@see LayoutResolver} (entry handle → default_layout → branded_layout).
+     * Null when no usable layout resolves anywhere in that chain.
+     */
+    public static function resolveLayout(?string $layoutHandle = null): ?string
     {
-        $layout = static::layout();
+        return LayoutResolver::resolve($layoutHandle);
+    }
+
+    /**
+     * Whether a usable layout resolves for the given `layout` handle (it maps to
+     * a view AND that view exists). With no handle this is the historic check
+     * against `branded_layout`.
+     */
+    public static function enabledFor(?string $layoutHandle = null): bool
+    {
+        $layout = static::resolveLayout($layoutHandle);
 
         return $layout !== null && View::exists($layout);
     }
 
-    /**
-     * Wrap $bodyHtml in the configured branded layout. Returns a complete HTML
-     * document when branding is active, and the body unchanged otherwise.
-     */
-    public static function wrap(string $bodyHtml, string $subject = ''): string
+    /** Back-compat alias: is the single `branded_layout` fallback usable? */
+    public static function enabled(): bool
     {
-        if (! static::enabled()) {
+        return static::enabledFor(null);
+    }
+
+    /**
+     * Wrap $bodyHtml in the layout chosen for this entry ($layoutHandle → view
+     * via {@see LayoutResolver}). Returns a complete HTML document when a usable
+     * layout resolves, and the body unchanged otherwise (unknown/missing layout).
+     */
+    public static function wrap(string $bodyHtml, string $subject = '', ?string $layoutHandle = null): string
+    {
+        $layout = static::resolveLayout($layoutHandle);
+
+        if ($layout === null || ! View::exists($layout)) {
             return $bodyHtml;
         }
 
         return (string) View::make('email-templates::branded', [
-            'layout' => static::layout(),
+            'layout' => $layout,
             'body' => $bodyHtml,
             'subject' => $subject,
         ])->render();

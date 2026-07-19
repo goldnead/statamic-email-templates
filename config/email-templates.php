@@ -36,6 +36,51 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Per-template layouts
+    |--------------------------------------------------------------------------
+    |
+    | Optional. A map of `handle => Blade-view-name` that lets each individual
+    | template ENTRY choose which shell wraps it. The entry's `layout` select
+    | field (see the blueprint) is populated from the KEYS of this map, and the
+    | chosen key is resolved to its view here. Typical use: transactional mails
+    | pick a lean transactional shell, sequences/campaigns pick a marketing one.
+    |
+    |   'layouts' => [
+    |       'sequence'      => 'emails.layouts.sequence',
+    |       'transactional' => 'emails.layouts.transactional',
+    |   ],
+    |
+    | Resolution precedence for an entry (see LayoutResolver):
+    |   1. the entry's own `layout` handle → its view in this map, else
+    |   2. the `default_layout` handle below → its view in this map, else
+    |   3. `branded_layout` above (the ultimate, back-compatible fallback).
+    |
+    | An unknown/blank handle, or a mapped view that does not exist, always
+    | falls back down this chain — nothing throws mid-send. Empty by default,
+    | so the addon keeps behaving exactly as before (single `branded_layout`).
+    |
+    */
+
+    'layouts' => [
+        // 'sequence' => 'emails.layouts.sequence',
+        // 'transactional' => 'emails.layouts.transactional',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Default layout
+    |--------------------------------------------------------------------------
+    |
+    | Optional. A handle from the `layouts` map above, used to wrap any entry
+    | that does not pick its own `layout`. `null` means fall through to
+    | `branded_layout` (the historic single-layout behaviour).
+    |
+    */
+
+    'default_layout' => null,
+
+    /*
+    |--------------------------------------------------------------------------
     | Preview
     |--------------------------------------------------------------------------
     |
