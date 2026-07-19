@@ -4,6 +4,7 @@ namespace Goldnead\EmailTemplates\Services;
 
 use Goldnead\EmailTemplates\Support\BardHtmlRenderer;
 use Goldnead\EmailTemplates\Support\BrandedBodyRenderer;
+use Goldnead\EmailTemplates\Support\EmailPreheader;
 use Goldnead\EmailTemplates\Support\EmailTemplateData;
 use Statamic\Contracts\Entries\Entry as EntryContract;
 
@@ -40,6 +41,12 @@ class EmailTemplateResolver
         if ($data === null) {
             return null;
         }
+
+        // Inject the hidden preheader (preview text) at the very top of the
+        // body. Its merge-variable tokens ride inside the body from here on, so
+        // the consuming addon's body substitution pass resolves them exactly
+        // like the subject — no separate preheader-only code path.
+        $data->body = EmailPreheader::prepend($data->body, $data->preview);
 
         // Wrap the resolved body in the host app's branded email shell when a
         // `email-templates.branded_layout` is configured. No-op (returns the
@@ -91,6 +98,7 @@ class EmailTemplateResolver
             slug: $slug,
             title: (string) ($entry->value('title') ?? $slug),
             subject: (string) ($entry->value('subject') ?? ''),
+            preview: (string) ($entry->value('preview') ?? ''),
             body: $this->renderer->render($entry->value('body')),
             plainText: $entry->value('plain_text') !== null ? (string) $entry->value('plain_text') : null,
             description: $entry->value('description') !== null ? (string) $entry->value('description') : null,

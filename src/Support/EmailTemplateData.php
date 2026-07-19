@@ -20,6 +20,7 @@ class EmailTemplateData
         public string $slug,
         public string $title,
         public string $subject = '',
+        public string $preview = '',
         public string $body = '',
         public ?string $plainText = null,
         public ?string $description = null,
@@ -39,6 +40,7 @@ class EmailTemplateData
             slug: $slug !== '' ? $slug : Str::slug($title),
             title: $title !== '' ? $title : $slug,
             subject: (string) ($data['subject'] ?? ''),
+            preview: (string) ($data['preview'] ?? ''),
             body: (string) ($data['body'] ?? $data['html'] ?? ''),
             plainText: isset($data['plain_text']) ? (string) $data['plain_text'] : null,
             description: isset($data['description']) ? (string) $data['description'] : null,
@@ -58,6 +60,7 @@ class EmailTemplateData
         return array_filter([
             'title' => $this->title,
             'subject' => $this->subject,
+            'preview' => $this->preview,
             'plain_text' => $this->plainText,
             'description' => $this->description,
         ], fn ($value) => $value !== null);
@@ -72,6 +75,7 @@ class EmailTemplateData
             'slug' => $this->slug,
             'title' => $this->title,
             'subject' => $this->subject,
+            'preview' => $this->preview,
             'body' => $this->body,
             'plain_text' => $this->plainText,
             'description' => $this->description,

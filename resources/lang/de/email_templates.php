@@ -7,6 +7,8 @@ return [
     'field_title' => 'Titel',
     'field_subject' => 'Betreff',
     'field_subject_instructions' => 'Die Betreffzeile der E-Mail. Unterstützt Merge-Variablen wie {{ contact.first_name }}.',
+    'field_preview' => 'Vorschautext',
+    'field_preview_instructions' => 'Preheader: kurzer Vorschautext, den Mail-Clients neben dem Betreff anzeigen. Unterstützt Merge-Variablen wie {{ contact.first_name }}.',
     'field_body' => 'Inhalt',
     'field_body_instructions' => 'Der E-Mail-Inhalt, als Rich-Text verfasst. Wird für Versand und Vorschau zu HTML gerendert.',
     'field_plain_text' => 'Nur-Text',

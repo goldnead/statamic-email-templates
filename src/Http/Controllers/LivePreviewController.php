@@ -5,6 +5,7 @@ namespace Goldnead\EmailTemplates\Http\Controllers;
 use Facades\Statamic\CP\LivePreview;
 use Goldnead\EmailTemplates\Support\BardHtmlRenderer;
 use Goldnead\EmailTemplates\Support\BrandedBodyRenderer;
+use Goldnead\EmailTemplates\Support\EmailPreheader;
 use Goldnead\EmailTemplates\Support\MergeVariables;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -49,7 +50,13 @@ class LivePreviewController extends Controller
         $sample = MergeVariables::sampleData();
 
         $subject = MergeVariables::apply((string) ($entry->value('subject') ?? ''), $sample);
+        $preview = MergeVariables::apply((string) ($entry->value('preview') ?? ''), $sample);
         $bodyHtml = MergeVariables::apply($this->renderer->render($entry->value('body')), $sample);
+
+        // Mirror the send path: the hidden preheader rides at the very top of
+        // the body. It stays invisible in the split-screen, but keeps preview
+        // and real send producing identical HTML.
+        $bodyHtml = EmailPreheader::prepend($bodyHtml, $preview);
 
         // When a branded layout is configured, the wrapped body is already a
         // complete branded HTML document — return it verbatim so the split-screen

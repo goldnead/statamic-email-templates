@@ -55,6 +55,15 @@ class EmailTemplateBlueprint
                                         ],
                                     ],
                                     [
+                                        'handle' => 'preview',
+                                        'field' => [
+                                            'type' => 'text',
+                                            'display' => __('email-templates::email_templates.field_preview'),
+                                            'instructions' => __('email-templates::email_templates.field_preview_instructions'),
+                                            'localizable' => true,
+                                        ],
+                                    ],
+                                    [
                                         'handle' => 'body',
                                         'field' => [
                                             'type' => 'bard',
