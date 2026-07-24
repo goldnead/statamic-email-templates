@@ -47,7 +47,7 @@ class MergeVariables
                 'salutation' => 'Hallo Maria',
             ],
             'sender' => [
-                'name' => config('mail.from.name') ?: 'Adrian Goldner',
+                'name' => config('mail.from.name') ?: config('app.name') ?: 'Sender',
                 'email' => config('mail.from.address') ?: 'info@example.com',
             ],
             'unsubscribe_url' => 'https://example.com/newsletter/abmelden',
