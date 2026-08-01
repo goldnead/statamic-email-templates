@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Statamic core bug
+    url: https://github.com/statamic/cms/issues
+    about: Problems with the Control Panel, collections or Live Preview themselves belong in statamic/cms.
+  - name: Security vulnerability
+    url: https://github.com/goldnead/statamic-email-templates/security/policy
+    about: Please report vulnerabilities privately, never as a public issue.

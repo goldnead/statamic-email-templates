@@ -1,0 +1,8 @@
+{
+    "disable": [
+        "testing.stache-isolation"
+    ],
+    "_reasons": {
+        "testing.stache-isolation": "False positive against Statamic 6. The rule greps the test suite for `PreventSavingStacheItemsToDisk`, but core renamed the trait to `Statamic\\Testing\\Concerns\\PreventsSavingStacheItemsToDisk` (note the 's'). tests/TestCase.php does use it, via Statamic's own AddonTestCase. Re-enable once the studio rule matches the Statamic 6 name."
+    }
+}

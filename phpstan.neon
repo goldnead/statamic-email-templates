@@ -1,0 +1,13 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+    - phpstan-baseline.neon
+
+parameters:
+    level: 5
+
+    paths:
+        - src
+
+    # A ratchet for new code, not a mandate to rewrite what already ships.
+    # Everything the baseline holds was green under the previous toolchain;
+    # new findings must be fixed rather than appended to the baseline.

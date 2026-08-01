@@ -1,0 +1,49 @@
+parameters:
+	ignoreErrors:
+		-
+			message: '#^Instanceof between Goldnead\\EmailTemplates\\Contracts\\EmailTemplateSource and Goldnead\\EmailTemplates\\Contracts\\EmailTemplateSource will always evaluate to true\.$#'
+			identifier: instanceof.alwaysTrue
+			count: 1
+			path: src/Console/ImportEmailTemplatesCommand.php
+
+		-
+			message: '#^Instanceof between Goldnead\\EmailTemplates\\Support\\EmailTemplateData and Goldnead\\EmailTemplates\\Support\\EmailTemplateData will always evaluate to true\.$#'
+			identifier: instanceof.alwaysTrue
+			count: 1
+			path: src/Console/ImportEmailTemplatesCommand.php
+
+		-
+			message: '#^Call to an undefined method Statamic\\Contracts\\Entries\\Entry\:\:collection\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: src/Services/EmailTemplateCollectionManager.php
+
+		-
+			message: '#^Call to an undefined method Statamic\\Contracts\\Entries\\Entry\:\:merge\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: src/Services/EmailTemplateCollectionManager.php
+
+		-
+			message: '#^Call to an undefined method Statamic\\Contracts\\Entries\\Entry\:\:save\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: src/Services/EmailTemplateCollectionManager.php
+
+		-
+			message: '#^Call to an undefined method Statamic\\Contracts\\Entries\\QueryBuilder\:\:where\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: src/Services/EmailTemplateCollectionManager.php
+
+		-
+			message: '#^Call to an undefined method Statamic\\Contracts\\Entries\\Entry\:\:value\(\)\.$#'
+			identifier: method.notFound
+			count: 11
+			path: src/Services/EmailTemplateResolver.php
+
+		-
+			message: '#^Call to function method_exists\(\) with ''Statamic\\\\Fieldtypes\\\\Bard\\\\Augmentor'' and ''convertToHtml'' will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: src/Support/BardHtmlRenderer.php

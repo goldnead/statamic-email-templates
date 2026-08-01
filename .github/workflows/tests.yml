@@ -1,0 +1,105 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pest:
+    name: PHP ${{ matrix.php }} · Laravel ${{ matrix.laravel }} · ${{ matrix.stability }}
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        # Statamic 6 requires laravel/framework ^12.40 || ^13.0, so those are the
+        # only two lines that can exist. Laravel 11 is not a supported target and
+        # cannot be installed alongside statamic/cms ^6.0 at all.
+        php: ['8.2', '8.3', '8.4']
+        laravel: ['^12.40', '^13.0']
+        stability: [prefer-stable]
+        exclude:
+          # Laravel 13 requires PHP ^8.3, so this cell can never resolve.
+          - php: '8.2'
+            laravel: '^13.0'
+        include:
+          # The lowest supported end of the range is where an unstated
+          # dependency assumption shows up first.
+          - php: '8.2'
+            laravel: '^12.40'
+            stability: prefer-lowest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, pdo_sqlite, sqlite3, intl, fileinfo, gd
+          coverage: none
+          tools: composer:v2
+
+      - name: Install dependencies
+        run: |
+          composer require "laravel/framework:${{ matrix.laravel }}" --no-interaction --no-update
+          composer update --${{ matrix.stability }} --prefer-dist --no-progress --no-interaction
+
+      - name: Show installed versions
+        run: composer show | grep -E 'statamic/cms|laravel/framework'
+
+      - name: Run Pest test suite
+        run: vendor/bin/pest --colors=always
+
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+          tools: composer:v2
+
+      - run: composer update --prefer-dist --no-progress --no-interaction
+
+      # Check, never fix. Auto-committing style onto a branch rewrites work
+      # nobody asked to have rewritten.
+      - name: Pint
+        run: vendor/bin/pint --test
+
+  static-analysis:
+    name: static analysis
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+          tools: composer:v2
+
+      - run: composer update --prefer-dist --no-progress --no-interaction
+
+      # phpstan-baseline.neon holds what already shipped. New findings fail here
+      # rather than being appended to the baseline.
+      - name: Larastan
+        run: vendor/bin/phpstan analyse --no-progress
