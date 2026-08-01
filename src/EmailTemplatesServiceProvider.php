@@ -6,6 +6,7 @@ use Goldnead\EmailTemplates\Console\ImportEmailTemplatesCommand;
 use Goldnead\EmailTemplates\Services\EmailTemplateCollectionManager;
 use Goldnead\EmailTemplates\Services\EmailTemplateResolver;
 use Goldnead\EmailTemplates\Support\MarketingEmailTemplateSource;
+use Illuminate\Support\Facades\Log;
 use Statamic\Facades\CP\Nav;
 use Statamic\Providers\AddonServiceProvider;
 
@@ -69,10 +70,15 @@ class EmailTemplatesServiceProvider extends AddonServiceProvider
     }
 
     /**
-     * Ensure the shared `email_templates` collection + blueprint exist so the
+     * Ensure the shared `et_templates` collection + blueprint exist so the
      * native CP listing and publish form are available. Idempotent; guarded by
      * a feature flag (default on) and wrapped so a not-yet-ready Stache during
      * early console commands (e.g. package discovery) never breaks boot.
+     *
+     * The failure is non-fatal but never silent: this writes into the site's own
+     * content directory, so a permissions problem, a corrupt YAML file or a
+     * blueprint conflict has to reach the operator's log. Warning level, not
+     * error: the next boot and the import command both retry.
      */
     protected function ensureCollection(): void
     {
@@ -83,8 +89,11 @@ class EmailTemplatesServiceProvider extends AddonServiceProvider
         try {
             $this->app->make(EmailTemplateCollectionManager::class)->ensure();
         } catch (\Throwable $e) {
-            // Non-fatal: the collection is (re)ensured on the next boot and by
-            // the import command. Never let it take down the whole addon.
+            Log::warning(
+                'email-templates: could not ensure the et_templates collection. '
+                .'The CP listing and publish form may be missing until this is resolved.',
+                ['exception' => $e]
+            );
         }
     }
 
