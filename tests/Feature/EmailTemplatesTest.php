@@ -1,6 +1,5 @@
 <?php
 
-use Goldnead\EmailTemplates\Contracts\EmailTemplateSource;
 use Goldnead\EmailTemplates\Facades\EmailTemplates;
 use Goldnead\EmailTemplates\Services\EmailTemplateCollectionManager;
 use Goldnead\EmailTemplates\Services\EmailTemplateResolver;

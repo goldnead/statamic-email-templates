@@ -28,8 +28,7 @@ class EmailTemplateResolver
     public function __construct(
         protected EmailTemplateCollectionManager $collection,
         protected BardHtmlRenderer $renderer,
-    ) {
-    }
+    ) {}
 
     /**
      * @param  (callable(string):(EmailTemplateData|array<string,mixed>|null))|null  $fallback

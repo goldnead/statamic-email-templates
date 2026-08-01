@@ -3,6 +3,11 @@
 namespace Goldnead\EmailTemplates\Support;
 
 use Statamic\Fields\Value;
+use Statamic\Fieldtypes\Bard\Augmentor;
+use Tiptap\Editor;
+use Tiptap\Extensions\StarterKit;
+use Tiptap\Marks\Link;
+use Tiptap\Marks\Underline;
 
 /**
  * Renders a Bard body value into email-ready HTML.
@@ -43,16 +48,16 @@ class BardHtmlRenderer
         // Primary path: Statamic ships tiptap-php (the engine behind Bard).
         // Wrap the stored node list in a prosemirror `doc` and render to HTML.
         try {
-            if (class_exists(\Tiptap\Editor::class)) {
+            if (class_exists(Editor::class)) {
                 $doc = (isset($value['type']) && $value['type'] === 'doc')
                     ? $value
                     : ['type' => 'doc', 'content' => $value];
 
-                return (string) (new \Tiptap\Editor([
+                return (string) (new Editor([
                     'extensions' => [
-                        new \Tiptap\Extensions\StarterKit,
-                        new \Tiptap\Marks\Link,
-                        new \Tiptap\Marks\Underline,
+                        new StarterKit,
+                        new Link,
+                        new Underline,
                     ],
                 ]))->setContent($doc)->getHTML();
             }
@@ -62,7 +67,7 @@ class BardHtmlRenderer
 
         // Fallback: Statamic's own Bard augmentor prosemirror -> HTML converter.
         try {
-            $augmentor = \Statamic\Fieldtypes\Bard\Augmentor::class;
+            $augmentor = Augmentor::class;
             if (class_exists($augmentor) && method_exists($augmentor, 'convertToHtml')) {
                 return (string) $augmentor::convertToHtml($value);
             }

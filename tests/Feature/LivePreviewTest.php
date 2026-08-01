@@ -1,6 +1,7 @@
 <?php
 
 use Facades\Statamic\CP\LivePreview;
+use Goldnead\EmailTemplates\Entries\EmailTemplateEntry;
 use Goldnead\EmailTemplates\Services\EmailTemplateCollectionManager;
 use Goldnead\EmailTemplates\Support\EmailTemplateData;
 use Goldnead\EmailTemplates\Support\MergeVariables;
@@ -37,9 +38,9 @@ it('registers the et_templates collection with a live-preview target and custom 
     $collection = Collection::findByHandle(EmailTemplateCollectionManager::HANDLE);
 
     expect($collection)->not->toBeNull()
-        ->and($collection->entryClass())->toBe(\Goldnead\EmailTemplates\Entries\EmailTemplateEntry::class)
+        ->and($collection->entryClass())->toBe(EmailTemplateEntry::class)
         ->and($collection->previewTargets()->pluck('format'))
-            ->toContain('/'.EmailTemplateCollectionManager::LIVE_PREVIEW_ROUTE);
+        ->toContain('/'.EmailTemplateCollectionManager::LIVE_PREVIEW_ROUTE);
 });
 
 // -- Live Preview render route -------------------------------------------

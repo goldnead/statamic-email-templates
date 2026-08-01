@@ -26,8 +26,7 @@ class EmailTemplateData
         public ?string $description = null,
         public ?string $layout = null,
         public string $source = 'entry',
-    ) {
-    }
+    ) {}
 
     /**
      * @param  array<string,mixed>  $data

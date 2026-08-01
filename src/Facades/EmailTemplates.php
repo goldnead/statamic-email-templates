@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Facade;
  *
  * @method static \Goldnead\EmailTemplates\Support\EmailTemplateData|null resolve(string $slug, ?callable $fallback = null)
  *
- * @see \Goldnead\EmailTemplates\Services\EmailTemplateResolver
+ * @see EmailTemplateResolver
  */
 class EmailTemplates extends Facade
 {

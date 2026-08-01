@@ -30,8 +30,7 @@ class LivePreviewController extends Controller
 {
     public function __construct(
         protected BardHtmlRenderer $renderer,
-    ) {
-    }
+    ) {}
 
     public function __invoke(Request $request): Response
     {

@@ -5,6 +5,49 @@ All notable changes to `statamic-email-templates` are documented here.
 This file was reconstructed from the release tags on 2026-07-30; entries up to
 1.2.1 are written from the tagged commits rather than recorded at the time.
 
+## Unreleased
+
+### Fixed — Live Preview no longer needs a fake front-end route
+
+`EmailTemplateEntry` now exists. The README has promised it since 1.1: an entry
+class that overrides `livePreviewUrl()` so the native Live Preview button appears
+without the collection needing a front-end route. It was never written, so the
+collection was instead given `_email-template-preview/{slug}` — a route that only
+ever returned 404 and gave email templates a public URL they should not have.
+
+On boot the addon sets `entryClass` and removes that placeholder route from
+existing collections. A route you set yourself is left untouched.
+
+### Fixed — a failing `ensure()` is logged instead of swallowed
+
+`ensure()` writes into the site's own content directory on every boot, inside a
+`catch (\Throwable)` with an empty body. A permissions problem, corrupt YAML or a
+blueprint conflict made the addon silently do nothing. It now logs a warning with
+the exception; boot still survives.
+
+### Fixed — the test suite actually ran the addon
+
+The hand-rolled Testbench case never registered the addon manifest, so Statamic's
+`booted` callbacks never fired: `$commands`, `$routes`, views and translations
+were wired by hand in the test and not at all the way they are in production.
+Three import tests failed with `CommandNotFoundException` and one Live Preview
+test failed outright. The suite now extends `Statamic\Testing\AddonTestCase`.
+
+### Added — documentation a buyer can install from
+
+The README covers requirements, installation, configuration, permissions,
+multi-site, brand scope and blueprint ownership. Plus `LICENSE.md` (MIT, matching
+`composer.json`), `SECURITY.md`, `.gitattributes`, GitHub Actions CI across the
+PHP × Laravel range, Pint and Larastan.
+
+### Major changes
+
+- `EmailTemplateCollectionManager::FRONTEND_ROUTE` is now
+  `LEGACY_FRONTEND_ROUTE` and is only used to recognise and remove the old route.
+- `illuminate/console` and `illuminate/support` are constrained to `^12.40|^13.0`.
+  The previous `^11.0` leg could never resolve — Statamic 6 requires
+  `laravel/framework ^12.40 || ^13.0`.
+
 ## 1.2.1 — 2026-07-24
 
 ### Fixed — the preview put somebody's name in every install

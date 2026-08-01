@@ -45,8 +45,7 @@ class EmailTemplateCollectionManager
 
     public function __construct(
         protected HtmlToBard $htmlToBard,
-    ) {
-    }
+    ) {}
 
     /**
      * Ensure the collection, its blueprint and its Live Preview wiring exist.

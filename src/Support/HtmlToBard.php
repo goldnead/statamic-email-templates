@@ -2,6 +2,11 @@
 
 namespace Goldnead\EmailTemplates\Support;
 
+use Tiptap\Editor;
+use Tiptap\Extensions\StarterKit;
+use Tiptap\Marks\Link;
+use Tiptap\Marks\Underline;
+
 /**
  * Converts legacy HTML into the Bard value (a ProseMirror node list) so the
  * import command can store file-based templates in the Bard body field.
@@ -18,7 +23,7 @@ namespace Goldnead\EmailTemplates\Support;
 class HtmlToBard
 {
     /**
-     * @return array<int,array<string,mixed>>  ProseMirror node list for a Bard field.
+     * @return array<int,array<string,mixed>> ProseMirror node list for a Bard field.
      */
     public function convert(string $html): array
     {
@@ -29,12 +34,12 @@ class HtmlToBard
         }
 
         try {
-            if (class_exists(\Tiptap\Editor::class)) {
-                $doc = (new \Tiptap\Editor([
+            if (class_exists(Editor::class)) {
+                $doc = (new Editor([
                     'extensions' => [
-                        new \Tiptap\Extensions\StarterKit,
-                        new \Tiptap\Marks\Link,
-                        new \Tiptap\Marks\Underline,
+                        new StarterKit,
+                        new Link,
+                        new Underline,
                     ],
                 ]))->setContent($html)->getDocument();
 

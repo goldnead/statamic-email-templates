@@ -1,13 +1,13 @@
 <?php
 
-use Goldnead\EmailTemplates\Entries\EmailTemplateEntry;
 use Goldnead\EmailTemplates\EmailTemplatesServiceProvider;
+use Goldnead\EmailTemplates\Entries\EmailTemplateEntry;
 use Goldnead\EmailTemplates\Services\EmailTemplateCollectionManager;
 use Goldnead\EmailTemplates\Support\EmailTemplateBlueprint;
 use Illuminate\Support\Facades\Log;
-use Statamic\Facades\CP\Nav;
 use Statamic\Facades\Blueprint;
 use Statamic\Facades\Collection;
+use Statamic\Facades\CP\Nav;
 
 // -- Failure reporting ----------------------------------------------------
 //

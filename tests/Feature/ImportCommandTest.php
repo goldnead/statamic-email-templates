@@ -12,7 +12,6 @@ use Illuminate\Support\Facades\Artisan;
  * The happy path (import, slug preservation, --overwrite) lives in
  * EmailTemplatesTest; this file covers the remaining branches.
  */
-
 it('is registered with the artisan console', function () {
     expect(array_key_exists('email-templates:import', Artisan::all()))->toBeTrue();
 });
