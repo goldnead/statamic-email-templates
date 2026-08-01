@@ -16,32 +16,7 @@ beforeEach(function () {
     Collection::findByHandle(EmailTemplateCollectionManager::HANDLE)?->queryEntries()->get()->each->delete();
 });
 
-/** An in-memory template source for exercising the import command. */
-function fakeTemplateSource(array $templates): EmailTemplateSource
-{
-    return new class($templates) implements EmailTemplateSource
-    {
-        public function __construct(private array $templates)
-        {
-        }
-
-        public function label(): string
-        {
-            return 'fake';
-        }
-
-        public function all(): array
-        {
-            return array_map(fn (array $t) => EmailTemplateData::fromArray($t), $this->templates);
-        }
-    };
-}
-
-function registerFakeSource(EmailTemplateSource $source): void
-{
-    app()->instance('email-templates.test.fake_source', $source);
-    app()->tag(['email-templates.test.fake_source'], 'email-templates.sources');
-}
+// `fakeTemplateSource()` and `registerFakeSource()` live in tests/Pest.php.
 
 // -- Slice 1: collection + blueprint + entry CRUD -------------------------
 

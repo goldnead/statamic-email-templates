@@ -146,3 +146,16 @@ it('ensures nothing when the addon is disabled', function () {
 
     $this->app->getProvider(EmailTemplatesServiceProvider::class)->bootAddon();
 });
+
+// -- Multi-site ------------------------------------------------------------
+
+it('marks the content fields localizable and the layout choice global', function () {
+    $blueprint = Blueprint::find(EmailTemplateBlueprint::NAMESPACE.'.'.EmailTemplateBlueprint::HANDLE);
+
+    // Wording differs per site; which shell wraps a template does not.
+    foreach (['title', 'subject', 'preview', 'body', 'plain_text'] as $handle) {
+        expect($blueprint->field($handle)->isLocalizable())->toBeTrue("field [$handle] must be localizable");
+    }
+
+    expect($blueprint->field('layout')->isLocalizable())->toBeFalse();
+});
