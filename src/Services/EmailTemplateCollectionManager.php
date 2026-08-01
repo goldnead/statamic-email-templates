@@ -2,6 +2,7 @@
 
 namespace Goldnead\EmailTemplates\Services;
 
+use Goldnead\EmailTemplates\Entries\EmailTemplateEntry;
 use Goldnead\EmailTemplates\Support\EmailTemplateBlueprint;
 use Goldnead\EmailTemplates\Support\EmailTemplateData;
 use Goldnead\EmailTemplates\Support\HtmlToBard;
@@ -9,7 +10,6 @@ use Statamic\Contracts\Entries\Entry as EntryContract;
 use Statamic\Facades\Blueprint;
 use Statamic\Facades\Collection;
 use Statamic\Facades\Entry;
-use Statamic\Facades\Site;
 
 /**
  * Owns the native Statamic `et_templates` collection: creating it (and its
@@ -36,11 +36,12 @@ class EmailTemplateCollectionManager
     // Live Preview split-screen shows the real email HTML.
     public const LIVE_PREVIEW_ROUTE = 'email-templates/live-preview';
 
-    // Internal front-end route pattern. Its ONLY purpose is to satisfy Statamic's
-    // `Entry::livePreviewUrl()` gate (returns null unless collection->route() is
-    // set), so the native Live Preview button appears. Real front-end visits find
-    // no template and 404; the split-screen renders via LIVE_PREVIEW_ROUTE.
-    public const FRONTEND_ROUTE = '_email-template-preview/{slug}';
+    // Legacy placeholder front-end route, written by v1.2.1 and earlier purely
+    // to satisfy Statamic's `Entry::livePreviewUrl()` gate. EmailTemplateEntry
+    // overrides that gate directly now, so the route serves no purpose and is
+    // removed from collections that still carry it. Kept as a constant so the
+    // cleanup can recognise it and never touches a route the user chose.
+    public const LEGACY_FRONTEND_ROUTE = '_email-template-preview/{slug}';
 
     public function __construct(
         protected HtmlToBard $htmlToBard,
@@ -64,12 +65,19 @@ class EmailTemplateCollectionManager
             $needsSave = true;
         }
 
-        // Give the collection a route so Statamic's native Live Preview button
-        // appears (Entry::livePreviewUrl() is gated on collection->route()).
-        // This is an internal gate only — real front-end visits 404; the actual
-        // split-screen renders via the preview target below.
-        if (! $collection->route(Site::default()->handle())) {
-            $collection->routes(self::FRONTEND_ROUTE);
+        // Entries are instantiated as EmailTemplateEntry, which enables the
+        // native Live Preview button without the collection needing a front-end
+        // route. Email templates are not public pages and must not occupy a URL.
+        if ($collection->entryClass() !== EmailTemplateEntry::class) {
+            $collection->entryClass(EmailTemplateEntry::class);
+            $needsSave = true;
+        }
+
+        // Upgrade path: drop the placeholder route written by v1.2.1 and
+        // earlier. Only ever removes the addon's own pattern, never a route a
+        // site owner set themselves.
+        if ($collection->routes()->contains(self::LEGACY_FRONTEND_ROUTE)) {
+            $collection->routes(null);
             $needsSave = true;
         }
 
