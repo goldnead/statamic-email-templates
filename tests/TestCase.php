@@ -3,32 +3,28 @@
 namespace Goldnead\EmailTemplates\Tests;
 
 use Goldnead\EmailTemplates\EmailTemplatesServiceProvider;
-use Orchestra\Testbench\TestCase as OrchestraTestCase;
 use Statamic\Facades\User;
-use Statamic\Providers\StatamicServiceProvider;
+use Statamic\Testing\AddonTestCase;
+use Statamic\Testing\Concerns\PreventsSavingStacheItemsToDisk;
 
-abstract class TestCase extends OrchestraTestCase
+/**
+ * Core's AddonTestCase wires Testbench, Statamic's own providers and the addon
+ * manifest in the order Statamic itself uses. That matters here: the addon's
+ * commands, routes, views and translations are all booted from inside
+ * `Statamic::booted()`, which only fires when the manifest knows the addon.
+ * A hand-rolled Testbench case has to call `bootAddon()` by hand and then tests
+ * a boot path that does not exist in production.
+ */
+abstract class TestCase extends AddonTestCase
 {
-    protected function setUp(): void
-    {
-        parent::setUp();
+    use PreventsSavingStacheItemsToDisk;
 
-        // Statamic's AddonServiceProvider runs bootAddon() inside
-        // Statamic::booted(...). orchestra/testbench doesn't fire those
-        // callbacks, so ensure() / Nav registration never runs. Force it.
-        $this->app->getProvider(EmailTemplatesServiceProvider::class)?->bootAddon();
-    }
-
-    protected function getPackageProviders($app): array
-    {
-        return [
-            StatamicServiceProvider::class,
-            EmailTemplatesServiceProvider::class,
-        ];
-    }
+    protected string $addonServiceProvider = EmailTemplatesServiceProvider::class;
 
     protected function defineEnvironment($app): void
     {
+        parent::defineEnvironment($app);
+
         $app['config']->set('app.key', 'base64:'.base64_encode(random_bytes(32)));
 
         $app['config']->set('database.default', 'sqlite');
@@ -37,26 +33,6 @@ abstract class TestCase extends OrchestraTestCase
             'database' => ':memory:',
             'prefix' => '',
         ]);
-
-        $app['config']->set('statamic.users.repository', 'file');
-
-        // Point Statamic's Stache (collections/entries) at a per-process temp
-        // dir so entry writes stay isolated between parallel runs and out of
-        // any shared fixtures.
-        $stacheRoot = sys_get_temp_dir().'/email-templates-stache-'.getmypid();
-        $app['config']->set('statamic.stache.stores.collections.directory', $stacheRoot.'/content/collections');
-        $app['config']->set('statamic.stache.stores.entries.directory', $stacheRoot.'/content/collections');
-    }
-
-    /**
-     * Statamic registers addon web routes inside Statamic::booted callbacks that
-     * orchestra/testbench never fires. Mount the Live Preview render route at
-     * the site root (as Statamic does in production) so `/email-templates/
-     * live-preview` resolves in feature tests.
-     */
-    protected function defineRoutes($router): void
-    {
-        $router->middleware('web')->group(__DIR__.'/../routes/web.php');
     }
 
     /** Create and authenticate a Statamic super user for CP feature tests. */
