@@ -5,7 +5,7 @@ All notable changes to `statamic-email-templates` are documented here.
 This file was reconstructed from the release tags on 2026-07-30; entries up to
 1.2.1 are written from the tagged commits rather than recorded at the time.
 
-## 1.3.1
+## 1.3.1 — 2026-08-02
 ### Fixed — a cold Stache cache broke every read on the templates collection
 
 1.3.0 gave the `et_templates` collection its own entry class, `EmailTemplateEntry`.
