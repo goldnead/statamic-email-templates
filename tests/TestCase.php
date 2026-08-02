@@ -30,6 +30,24 @@ abstract class TestCase extends AddonTestCase
     }
 
     /**
+     * Production parity for the cache's unserialize allowlist.
+     *
+     * A Laravel skeleton ships `cache.serializable_classes => false`, which
+     * means "only unserialize what the framework and its packages registered".
+     * Testbench leaves the key unset, and unset switches the allowlist off. The
+     * providers that fill the list run in `RegisterProviders`, which Testbench
+     * bootstraps *before* `defineEnvironment()` / `getEnvironmentSetUp()` — so
+     * the value has to be here, at configuration time, or every provider sees
+     * `null`, bails out, and the suite tests a code path no real site runs.
+     */
+    protected function resolveApplicationConfiguration($app): void
+    {
+        parent::resolveApplicationConfiguration($app);
+
+        $app['config']->set('cache.serializable_classes', false);
+    }
+
+    /**
      * Runs after `defineEnvironment()`, so this is the last word on the config —
      * AddonTestCase sets the Stache directories in here too.
      */

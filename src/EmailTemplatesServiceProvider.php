@@ -3,6 +3,7 @@
 namespace Goldnead\EmailTemplates;
 
 use Goldnead\EmailTemplates\Console\ImportEmailTemplatesCommand;
+use Goldnead\EmailTemplates\Entries\EmailTemplateEntry;
 use Goldnead\EmailTemplates\Services\EmailTemplateCollectionManager;
 use Goldnead\EmailTemplates\Services\EmailTemplateResolver;
 use Goldnead\EmailTemplates\Support\MarketingEmailTemplateSource;
@@ -44,6 +45,8 @@ class EmailTemplatesServiceProvider extends AddonServiceProvider
 
         $this->mergeConfigFrom(__DIR__.'/../config/email-templates.php', 'email-templates');
 
+        $this->allowEntryClassToBeUnserialized();
+
         // Singletons so registered import sources / bindings persist for the
         // request. The resolver is the facade accessor target.
         $this->app->singleton(EmailTemplateCollectionManager::class);
@@ -54,6 +57,40 @@ class EmailTemplatesServiceProvider extends AddonServiceProvider
         // marketing source is a soft dependency (no-op when marketing absent).
         $this->app->bind(MarketingEmailTemplateSource::class);
         $this->app->tag([MarketingEmailTemplateSource::class], 'email-templates.sources');
+    }
+
+    /**
+     * Put EmailTemplateEntry on the cache's unserialize allowlist.
+     *
+     * The `et_templates` collection sets `entry_class`, so every entry in it is
+     * an EmailTemplateEntry, and the Stache writes those objects into the cache
+     * store. Laravel reads that cache back with
+     * `unserialize($payload, ['allowed_classes' => config('cache.serializable_classes')])`.
+     * A class that is missing from the list does not come back as itself, it
+     * comes back as `__PHP_Incomplete_Class`, and the first method call on it
+     * throws. Statamic registers its own classes the same way in
+     * `Statamic\Providers\AppServiceProvider::register()`; an addon that ships
+     * its own entry class has to add it.
+     *
+     * The list has to be complete before the cache store is instantiated, so
+     * this belongs in `register()`, not in `bootAddon()`.
+     *
+     * `null` or `true` means the site runs without an allowlist. Nothing to add
+     * then, and writing a list would switch the restriction on for a site that
+     * did not ask for it. Same guard as core uses.
+     */
+    protected function allowEntryClassToBeUnserialized(): void
+    {
+        $existing = $this->app['config']->get('cache.serializable_classes');
+
+        if ($existing === null || $existing === true) {
+            return;
+        }
+
+        $this->app['config']->set('cache.serializable_classes', array_merge(
+            is_array($existing) ? $existing : [],
+            [EmailTemplateEntry::class],
+        ));
     }
 
     public function bootAddon(): void

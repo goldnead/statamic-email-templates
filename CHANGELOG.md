@@ -5,6 +5,35 @@ All notable changes to `statamic-email-templates` are documented here.
 This file was reconstructed from the release tags on 2026-07-30; entries up to
 1.2.1 are written from the tagged commits rather than recorded at the time.
 
+## 1.3.1
+### Fixed — a cold Stache cache broke every read on the templates collection
+
+1.3.0 gave the `et_templates` collection its own entry class, `EmailTemplateEntry`.
+The Stache writes its items into the cache store, and Laravel reads that cache
+back through `unserialize()` with an allowlist of classes
+(`cache.serializable_classes`). Statamic registers its own classes there;
+`EmailTemplateEntry` was not registered, so every cached template entry came back
+as `__PHP_Incomplete_Class` and the first method call on it threw.
+
+The failure was latent: as long as the cache still held entries written by 1.2.x,
+nothing happened. It showed up on the first cold cache after the upgrade, which on
+most sites is a `cache:clear` or a deploy.
+
+How you recognise it:
+
+- `php artisan statamic:stache:warm` aborts with `The script tried to call a
+  method on an incomplete object … "Goldnead\EmailTemplates\Entries\EmailTemplateEntry"`,
+  reported from `Stache/Stores/BasicStore.php`
+- `Statamic\Jobs\HandleEntrySchedule` fails on every scheduler tick and piles up
+  in `failed_jobs`
+- the stack trace runs through the store twice, because the URI index reloads the
+  same item while it is being read
+
+The addon now adds its entry class to `cache.serializable_classes` in `register()`,
+the way Statamic core does for its own classes. Sites that run without an
+allowlist are left alone. After the update one `php artisan cache:clear` is
+enough; no content changes.
+
 ## 1.3.0 — 2026-08-01
 ### Fixed — Live Preview no longer needs a fake front-end route
 
