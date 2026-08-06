@@ -5,6 +5,17 @@ All notable changes to `statamic-email-templates` are documented here.
 This file was reconstructed from the release tags on 2026-07-30; entries up to
 1.2.1 are written from the tagged commits rather than recorded at the time.
 
+## Unreleased
+
+### Changed — the licence is now proprietary
+
+This is a paid Marketplace addon. `composer.json` declares `proprietary` and the
+licence file carries the commercial addon licence instead of MIT. Entitlement is
+enforced by the Statamic Marketplace, not by code in this package.
+
+Tags up to and including `v1.3.1` remain MIT. The change takes effect with the next
+release.
+
 ## 1.3.1 — 2026-08-02
 ### Fixed — a cold Stache cache broke every read on the templates collection
 
