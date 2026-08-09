@@ -5,7 +5,7 @@ All notable changes to `statamic-email-templates` are documented here.
 This file was reconstructed from the release tags on 2026-07-30; entries up to
 1.2.1 are written from the tagged commits rather than recorded at the time.
 
-## Unreleased
+## 2.0.0 — 2026-08-09
 
 ### Changed — the licence is now proprietary
 
