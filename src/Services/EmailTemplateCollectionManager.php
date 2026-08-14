@@ -12,6 +12,7 @@ use Statamic\Contracts\Entries\Entry as EntryContract;
 use Statamic\Facades\Blueprint;
 use Statamic\Facades\Collection;
 use Statamic\Facades\Entry;
+use Statamic\Fields\Blueprint as BlueprintInstance;
 
 /**
  * Owns the native Statamic `et_templates` collection: creating it (and its
@@ -118,15 +119,53 @@ class EmailTemplateCollectionManager
         if (! $blueprint) {
             EmailTemplateBlueprint::make()->save();
         } elseif (Brands::active() && ! $blueprint->hasField(Brands::FIELD)) {
-            // Upgrade path. The blueprint is written once and then left alone,
-            // so an install that had templates before it had brands would keep
-            // a form with no brand on it — and every template saved through
-            // that form would be stamped by the entry class with a brand its
-            // editor could neither see nor change.
-            EmailTemplateBlueprint::make()->save();
+            $this->addBrandFieldTo($blueprint);
         }
 
         $this->backfillBrands();
+    }
+
+    /**
+     * Add the brand field to a blueprint that was written before brands existed.
+     *
+     * **Inserted, not rewritten.** The blueprint is a file in the site's own
+     * `resources/`, and a site owner may have edited it — reordered fields,
+     * changed an instruction, renamed a `layout` option to something readable.
+     * Re-saving `EmailTemplateBlueprint::make()` would silently replace all of
+     * that with the packaged defaults, which is exactly what it did on the hub:
+     * a hand-written layout label came back as the humanised handle. An upgrade
+     * that quietly discards somebody's edits is worse than one that does
+     * nothing, because nobody is looking at that file on the day it happens.
+     *
+     * The field goes at the end of the first section, which is where the last
+     * of the packaged fields sits. Failing to find a section is not fatal — the
+     * form simply keeps no brand control, and the entry class still stamps the
+     * value, which is the same state as a site that never upgraded.
+     */
+    protected function addBrandFieldTo(BlueprintInstance $blueprint): void
+    {
+        $contents = $blueprint->contents();
+        $field = EmailTemplateBlueprint::brandFieldDefinition();
+
+        if ($field === []) {
+            return;
+        }
+
+        $tabKey = array_key_first($contents['tabs'] ?? []);
+
+        if ($tabKey === null) {
+            return;
+        }
+
+        $sectionKey = array_key_first($contents['tabs'][$tabKey]['sections'] ?? []);
+
+        if ($sectionKey === null) {
+            return;
+        }
+
+        $contents['tabs'][$tabKey]['sections'][$sectionKey]['fields'][] = $field;
+
+        $blueprint->setContents($contents)->save();
     }
 
     /**

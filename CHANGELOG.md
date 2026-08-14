@@ -5,6 +5,27 @@ All notable changes to `statamic-email-templates` are documented here.
 This file was reconstructed from the release tags on 2026-07-30; entries up to
 1.2.1 are written from the tagged commits rather than recorded at the time.
 
+## 2.1.2 — 2026-08-14
+
+### Fixed — das Nachrüsten des Marken-Feldes überschrieb den ganzen Blueprint
+
+Beim Upgrade auf 2.1.x wurde der Blueprint komplett neu geschrieben, statt nur
+das fehlende Feld einzusetzen. Der Blueprint liegt aber in `resources/` der
+Seite und darf dort bearbeitet worden sein — umsortierte Felder, geänderte
+Hinweistexte, ein lesbar benanntes `layout`-Wahlfeld. All das kam als
+Paket-Standard zurück.
+
+Auf dem Hub genau so passiert: aus der Layout-Option
+`FamilyStack (Paper-Craft)` wurde `Familystack`, der aus dem Handle erzeugte
+Name. Nichts fiel aus, niemand bekam eine Meldung, und niemand schaut an dem Tag
+in diese Datei — das ist die Sorte Upgrade, die schlimmer ist als eine, die gar
+nichts tut.
+
+Jetzt wird das Feld an das Ende des ersten Abschnitts **eingesetzt**, der Rest
+der Datei bleibt, wie die Seite ihn hat. Zwei Tests halten das fest: ein
+selbst hinzugefügtes Feld überlebt das Upgrade, und drei Bootvorgänge
+hintereinander erzeugen das Marken-Feld genau einmal.
+
 ## 2.1.1 — 2026-08-14
 
 ### Fixed — 2.1.0 ging aus einer veralteten Kopie hervor und war noch MIT

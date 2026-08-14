@@ -221,6 +221,48 @@ it('leaves a template that already names a brand where it is', function () {
     )->toBe('familystack');
 });
 
+it('keeps a site\'s own edits to the blueprint when it adds the field', function () {
+    // The failure this replaces, found on the hub: the upgrade re-saved the
+    // packaged blueprint, and a layout option somebody had renamed to
+    // "FamilyStack (Paper-Craft)" came back as the humanised handle. An upgrade
+    // that quietly discards an edit is worse than one that does nothing —
+    // nobody is looking at that file on the day it happens.
+    $blueprint = EmailTemplateBlueprint::make();
+    $contents = $blueprint->contents();
+    $contents['tabs']['main']['sections'][0]['fields'][] = [
+        'handle' => 'house_note',
+        'field' => ['type' => 'text', 'display' => 'A field this site added'],
+    ];
+    $blueprint->setContents($contents)->save();
+
+    fakeBrandContext(current: 'gldnr-studio');
+
+    app(EmailTemplateCollectionManager::class)->ensure();
+
+    $fields = Blueprint::find(EmailTemplateBlueprint::NAMESPACE.'.'.EmailTemplateBlueprint::HANDLE)
+        ->fields()->all();
+
+    expect($fields->has(Brands::FIELD))->toBeTrue()
+        ->and($fields->has('house_note'))->toBeTrue()
+        ->and($fields->get('house_note')->display())->toBe('A field this site added');
+});
+
+it('adds the brand field only once, however often it boots', function () {
+    EmailTemplateBlueprint::make()->save();
+
+    fakeBrandContext(current: 'gldnr-studio');
+
+    $manager = app(EmailTemplateCollectionManager::class);
+    $manager->ensure();
+    $manager->ensure();
+    $manager->ensure();
+
+    $contents = Blueprint::find(EmailTemplateBlueprint::NAMESPACE.'.'.EmailTemplateBlueprint::HANDLE)->contents();
+    $handles = collect($contents['tabs']['main']['sections'][0]['fields'])->pluck('handle');
+
+    expect($handles->filter(fn ($handle) => $handle === Brands::FIELD))->toHaveCount(1);
+});
+
 it('adds the brand field to a blueprint written before brands existed', function () {
     // The blueprint is written once and then left alone, so without this an
     // install that switched to multi-brand kept a form with no brand on it —

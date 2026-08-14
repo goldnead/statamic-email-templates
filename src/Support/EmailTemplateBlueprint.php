@@ -134,11 +134,25 @@ class EmailTemplateBlueprint
      */
     protected static function brandField(): array
     {
+        $field = self::brandFieldDefinition();
+
+        return $field === [] ? [] : [$field];
+    }
+
+    /**
+     * The brand field on its own, so the upgrade path can insert it into an
+     * existing blueprint instead of rewriting the whole file over a site's own
+     * edits. Empty on a single-brand install, where there is no field.
+     *
+     * @return array<string, mixed>
+     */
+    public static function brandFieldDefinition(): array
+    {
         if (! Brands::active()) {
             return [];
         }
 
-        return [[
+        return [
             'handle' => Brands::FIELD,
             'field' => [
                 'type' => 'select',
@@ -150,7 +164,7 @@ class EmailTemplateBlueprint
                 'clearable' => false,
                 'localizable' => false,
             ],
-        ]];
+        ];
     }
 
     /**
