@@ -224,4 +224,4 @@ with the Control Panel itself belong in [statamic/cms](https://github.com/statam
 
 ## Changelog · License
 
-See [CHANGELOG.md](CHANGELOG.md) and [LICENSE.md](LICENSE.md) (MIT).
+See [CHANGELOG.md](CHANGELOG.md) and [LICENSE.md](LICENSE.md) (commercial license).

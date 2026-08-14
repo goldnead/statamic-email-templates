@@ -2,7 +2,7 @@
     "name": "goldnead/statamic-email-templates",
     "description": "Statamic 6 Email Templates — CP-native, Bard-authored email templates in a shared collection, consumed optionally by statamic-automations and statamic-marketing.",
     "type": "statamic-addon",
-    "license": "MIT",
+    "license": "proprietary",
     "homepage": "https://github.com/goldnead/statamic-email-templates",
     "keywords": [
         "statamic",
