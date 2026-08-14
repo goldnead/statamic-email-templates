@@ -16,6 +16,8 @@ return [
     'field_body_instructions' => 'The email body, authored as rich text. Rendered to HTML for sending and preview.',
     'field_plain_text' => 'Plain text',
     'field_plain_text_instructions' => 'Optional plain-text alternative for clients that do not render HTML.',
+    'field_brand' => 'Brand',
+    'field_brand_instructions' => 'Which brand this template belongs to. A template is only found by the brand it is filed under, so two brands can each have their own template under the same slug.',
     'field_description' => 'Description',
     'field_description_instructions' => 'Internal note. Not sent to recipients.',
     'live_preview_target' => 'Email',

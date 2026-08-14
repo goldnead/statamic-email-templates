@@ -3,9 +3,11 @@
 namespace Goldnead\EmailTemplates\Services;
 
 use Goldnead\EmailTemplates\Entries\EmailTemplateEntry;
+use Goldnead\EmailTemplates\Support\Brands;
 use Goldnead\EmailTemplates\Support\EmailTemplateBlueprint;
 use Goldnead\EmailTemplates\Support\EmailTemplateData;
 use Goldnead\EmailTemplates\Support\HtmlToBard;
+use Illuminate\Support\Facades\Log;
 use Statamic\Contracts\Entries\Entry as EntryContract;
 use Statamic\Facades\Blueprint;
 use Statamic\Facades\Collection;
@@ -111,18 +113,89 @@ class EmailTemplateCollectionManager
             $collection->save();
         }
 
-        if (! Blueprint::find(EmailTemplateBlueprint::NAMESPACE.'.'.EmailTemplateBlueprint::HANDLE)) {
+        $blueprint = Blueprint::find(EmailTemplateBlueprint::NAMESPACE.'.'.EmailTemplateBlueprint::HANDLE);
+
+        if (! $blueprint) {
+            EmailTemplateBlueprint::make()->save();
+        } elseif (Brands::active() && ! $blueprint->hasField(Brands::FIELD)) {
+            // Upgrade path. The blueprint is written once and then left alone,
+            // so an install that had templates before it had brands would keep
+            // a form with no brand on it — and every template saved through
+            // that form would be stamped by the entry class with a brand its
+            // editor could neither see nor change.
             EmailTemplateBlueprint::make()->save();
         }
+
+        $this->backfillBrands();
     }
 
-    /** Find a template entry by slug (or null). */
+    /**
+     * File every template that predates the brand field under the default brand.
+     *
+     * Without this, switching an existing install to multi-brand empties the
+     * listing: the entries carry no brand, the listing filters on one, and the
+     * templates are still there and reachable by nothing. The default brand is
+     * the same answer brand-context's own migration gave the tables it moved,
+     * so a mixed install stays consistent with itself.
+     *
+     * A judgement call worth stating: this *guesses*. Templates written for one
+     * particular brand land under the default one and have to be moved by hand.
+     * The alternative — leaving them unbranded — makes them invisible, which is
+     * the failure that is hard to diagnose rather than the one you can see and
+     * fix on the form.
+     *
+     * Costs one query per boot and writes only on the boot after the switch.
+     */
+    protected function backfillBrands(): void
+    {
+        if (! Brands::active() || ($default = Brands::default()) === null) {
+            return;
+        }
+
+        $orphans = Entry::query()
+            ->where('collection', self::HANDLE)
+            ->whereNull(Brands::FIELD)
+            ->get();
+
+        if ($orphans->isEmpty()) {
+            return;
+        }
+
+        foreach ($orphans as $entry) {
+            $entry->set(Brands::FIELD, $default);
+            $entry->saveQuietly();
+        }
+
+        Log::info(sprintf(
+            'email-templates: filed %d template(s) without a brand under [%s]. '
+            .'Move any that belong to another brand on their edit form.',
+            $orphans->count(),
+            $default,
+        ));
+    }
+
+    /**
+     * Find a template entry by slug (or null).
+     *
+     * Under multi-brand the slug alone is not an address: two brands may each
+     * have a `welcome`, and whichever the Stache happened to return first would
+     * otherwise answer for both. Scoped to the brand the caller is running as —
+     * and when there is none (a console command, a queue job outside a brand),
+     * the lookup stays unscoped rather than returning nothing, because a send
+     * that cannot name its brand is not the same thing as a send that belongs
+     * to no brand.
+     */
     public function findBySlug(string $slug): ?EntryContract
     {
-        return Entry::query()
+        $query = Entry::query()
             ->where('collection', self::HANDLE)
-            ->where('slug', $slug)
-            ->first();
+            ->where('slug', $slug);
+
+        if (Brands::active() && ($brand = Brands::current()) !== null) {
+            $query->where(Brands::FIELD, $brand);
+        }
+
+        return $query->first();
     }
 
     /**

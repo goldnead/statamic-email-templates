@@ -16,6 +16,8 @@ return [
     'field_body_instructions' => 'Der E-Mail-Inhalt, als Rich-Text verfasst. Wird für Versand und Vorschau zu HTML gerendert.',
     'field_plain_text' => 'Nur-Text',
     'field_plain_text_instructions' => 'Optionale Nur-Text-Variante für Clients, die kein HTML darstellen.',
+    'field_brand' => 'Marke',
+    'field_brand_instructions' => 'Zu welcher Marke diese Vorlage gehört. Gefunden wird sie nur von ihrer eigenen Marke, deshalb können zwei Marken je eine eigene Vorlage unter demselben Slug haben.',
     'field_description' => 'Beschreibung',
     'field_description_instructions' => 'Interne Notiz. Wird nicht an Empfänger gesendet.',
     'live_preview_target' => 'E-Mail',

@@ -2,13 +2,17 @@
 
 namespace Goldnead\EmailTemplates;
 
+use Goldnead\EmailTemplates\Console\AssignBrandCommand;
 use Goldnead\EmailTemplates\Console\ImportEmailTemplatesCommand;
 use Goldnead\EmailTemplates\Entries\EmailTemplateEntry;
 use Goldnead\EmailTemplates\Services\EmailTemplateCollectionManager;
 use Goldnead\EmailTemplates\Services\EmailTemplateResolver;
+use Goldnead\EmailTemplates\Support\Brands;
 use Goldnead\EmailTemplates\Support\MarketingEmailTemplateSource;
 use Illuminate\Support\Facades\Log;
+use Statamic\Facades\Collection;
 use Statamic\Facades\CP\Nav;
+use Statamic\Hooks\CP\EntriesIndexQuery;
 use Statamic\Providers\AddonServiceProvider;
 
 /**
@@ -28,6 +32,7 @@ class EmailTemplatesServiceProvider extends AddonServiceProvider
 {
     protected $commands = [
         ImportEmailTemplatesCommand::class,
+        AssignBrandCommand::class,
     ];
 
     /**
@@ -103,7 +108,46 @@ class EmailTemplatesServiceProvider extends AddonServiceProvider
         ], 'email-templates-config');
 
         $this->ensureCollection();
+        $this->scopeListingToCurrentBrand();
         $this->registerNavigation();
+    }
+
+    /**
+     * Filter the Control Panel listing of `et_templates` to the current brand.
+     *
+     * Statamic's entry listing knows about sites, not brands, so without this
+     * the screen showed every brand's templates to every brand — which is what
+     * Adrian saw on the hub: `?brand=gldnr-studio` and a list of FamilyStack
+     * mails. The brand switcher changed the header and nothing else.
+     *
+     * `EntriesIndexQuery` is core's own hook for exactly this, so the filter
+     * sits in the query rather than in a filter the user has to remember to
+     * apply — and rather than in a rewritten controller, which would have to be
+     * rewritten again on every Statamic release.
+     *
+     * Only this collection. The hook fires for every collection in the install,
+     * and a site's own pages have no brand field to filter on.
+     */
+    protected function scopeListingToCurrentBrand(): void
+    {
+        if (! class_exists(EntriesIndexQuery::class) || ! Brands::active()) {
+            return;
+        }
+
+        EntriesIndexQuery::hook('query', function ($payload, $next) {
+            if ($payload->collection?->handle() === EmailTemplateCollectionManager::HANDLE) {
+                $brand = Brands::current();
+
+                // No resolved brand means no answer, not every answer. The
+                // Control Panel always has one (brand-context falls back to the
+                // default), so this is the console and the odd unauthenticated
+                // render — neither of which should leak one brand's mails into
+                // another's screen.
+                $payload->query->where(Brands::FIELD, $brand);
+            }
+
+            return $next($payload);
+        });
     }
 
     /**
@@ -145,6 +189,33 @@ class EmailTemplatesServiceProvider extends AddonServiceProvider
                 ->section('Content')
                 ->icon('mail')
                 ->url(cp_route('collections.show', EmailTemplateCollectionManager::HANDLE));
+
+            $this->hideCollectionFromNav($nav);
         });
+    }
+
+    /**
+     * Drop `et_templates` from the automatic list under Content → Collections.
+     *
+     * Statamic lists every collection there, so the addon's own entry above put
+     * the same screen in the sidebar twice, under two different names — and the
+     * one nobody chose sat next to the site's real collections as if email
+     * templates were pages.
+     *
+     * Removed by the collection's *stored* title rather than the translation
+     * key: the title is whatever the site saved, a translation is what this
+     * process happens to be speaking, and only the first is what core put in
+     * the nav. Nothing happens when the collection is absent — the child is
+     * simply not there to remove.
+     */
+    protected function hideCollectionFromNav($nav): void
+    {
+        $collection = Collection::findByHandle(EmailTemplateCollectionManager::HANDLE);
+
+        if (! $collection) {
+            return;
+        }
+
+        $nav->remove('Content', 'Collections', $collection->title());
     }
 }

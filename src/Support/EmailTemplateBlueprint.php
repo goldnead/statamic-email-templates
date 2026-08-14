@@ -101,6 +101,7 @@ class EmailTemplateBlueprint
                                             'localizable' => true,
                                         ],
                                     ],
+                                    ...self::brandField(),
                                     [
                                         'handle' => 'description',
                                         'field' => [
@@ -115,6 +116,41 @@ class EmailTemplateBlueprint
                     ],
                 ],
             ]);
+    }
+
+    /**
+     * The `brand` field, or nothing at all.
+     *
+     * Spread into the field list rather than added with a flag, so a
+     * single-brand install gets a blueprint byte-for-byte identical to the one
+     * it had before brands existed — no empty select, no field to explain, and
+     * nothing for the layout to make room for.
+     *
+     * Required once it exists. A template with no brand is reachable by no
+     * brand and belongs to none: it would sit in the collection answering to
+     * nobody, which is worse than being asked one question on the form.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    protected static function brandField(): array
+    {
+        if (! Brands::active()) {
+            return [];
+        }
+
+        return [[
+            'handle' => Brands::FIELD,
+            'field' => [
+                'type' => 'select',
+                'display' => __('email-templates::email_templates.field_brand'),
+                'instructions' => __('email-templates::email_templates.field_brand_instructions'),
+                'options' => Brands::options(),
+                'required' => true,
+                'validate' => ['required'],
+                'clearable' => false,
+                'localizable' => false,
+            ],
+        ]];
     }
 
     /**

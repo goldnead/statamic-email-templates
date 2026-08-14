@@ -5,6 +5,50 @@ All notable changes to `statamic-email-templates` are documented here.
 This file was reconstructed from the release tags on 2026-07-30; entries up to
 1.2.1 are written from the tagged commits rather than recorded at the time.
 
+## 2.1.0 — 2026-08-14
+
+### Added — Vorlagen gehören zu einer Marke
+
+Auf einer Mehrmarken-Installation zeigte die Liste jeder Marke die Vorlagen aller Marken. Auf dem
+Hub hieß das: `?brand=gldnr-studio` und eine Liste FamilyStack-Mails. Der Markenumschalter änderte
+die Kopfzeile und sonst nichts.
+
+Die Ursache war nicht der Filter, sondern das fehlende Feld: dieses Addon kannte keine Marken.
+Statamics Eintragsliste kennt Sites, keine Marken, und ein Slug ist die Adresse, nach der jede
+Automation, jede Kampagne und jeder transaktionale Versand fragt — zwei Marken, die beide eine
+`welcome` verschicken, brauchen zwei `welcome` und keinen Weg zueinander.
+
+Neu ist deshalb ein Pflichtfeld `brand` im Blueprint, ein Filter auf der Liste (über Statamics
+eigenen Haken `EntriesIndexQuery`, nicht über einen umgeschriebenen Controller) und die Auflösung
+per Slug innerhalb der aktuellen Marke.
+
+**Für Einmarken-Installationen ändert sich nichts.** `goldnead/statamic-brand-context` bleibt eine
+weiche Abhängigkeit: kein Composer-Eintrag, kein Klassenname außerhalb von `Support\Brands`, und
+ohne das Paket — oder mit ihm im Einmarken-Betrieb — ist das Blueprint Zeichen für Zeichen das
+alte, ohne Feld, ohne Filter.
+
+**Beim Umstieg** werden Vorlagen ohne Marke beim ersten Booten unter der **Standardmarke**
+abgelegt, dieselbe Antwort, die die Migration von brand-context ihren Tabellen gegeben hat. Das
+ist eine Vermutung, und sie ist auf dem Hub falsch: die sechs FamilyStack-Mails landen unter
+`default`. Sie ohne Marke zu lassen wäre schlimmer — dann fände sie niemand mehr, in keiner Liste
+und bei keinem Versand. Zum Geraderücken:
+
+```
+php please email-templates:assign-brand familystack --from=default --dry-run
+php please email-templates:assign-brand familystack --from=default
+```
+
+Wo kein Versand seine Marke nennen kann (Konsole, Queue-Job außerhalb einer Marke), bleibt die
+Auflösung per Slug ungefiltert statt leer: „kann die Marke nicht nennen" ist nicht dasselbe wie
+„gehört zu keiner".
+
+### Fixed — „Email Templates" stand zweimal in der Seitenleiste
+
+Statamic listet jede Collection unter Content → Collections, und das Addon legt darüber hinaus
+einen eigenen Menüpunkt an. Derselbe Schirm stand also zweimal im Menü, unter zwei Namen, und der
+ungewollte saß zwischen den echten Collections der Seite, als wären E-Mail-Vorlagen Seiten. Der
+automatische Eintrag wird jetzt entfernt.
+
 ## 1.3.1 — 2026-08-02
 ### Fixed — a cold Stache cache broke every read on the templates collection
 
