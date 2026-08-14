@@ -49,6 +49,15 @@ einen eigenen Menüpunkt an. Derselbe Schirm stand also zweimal im Menü, unter 
 ungewollte saß zwischen den echten Collections der Seite, als wären E-Mail-Vorlagen Seiten. Der
 automatische Eintrag wird jetzt entfernt.
 
+## 2.0.0 — 2026-08-13
+
+### Changed — die Lizenz wechselt von MIT auf proprietär
+
+Nachgetragen: der Sprung wurde getaggt, aber nicht hier verbucht. Dies ist ein
+bezahltes Marketplace-Addon und lief bis dahin unter der falschen Lizenz. Die
+Berechtigung setzt der Statamic Marketplace durch, nicht Code im Paket. Tags bis
+einschließlich 1.3.1 bleiben MIT.
+
 ## 1.3.1 — 2026-08-02
 ### Fixed — a cold Stache cache broke every read on the templates collection
 
