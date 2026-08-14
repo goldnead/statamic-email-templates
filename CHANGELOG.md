@@ -5,6 +5,22 @@ All notable changes to `statamic-email-templates` are documented here.
 This file was reconstructed from the release tags on 2026-07-30; entries up to
 1.2.1 are written from the tagged commits rather than recorded at the time.
 
+## 2.1.1 — 2026-08-14
+
+### Fixed — 2.1.0 ging aus einer veralteten Kopie hervor und war noch MIT
+
+Der Marken-Stand aus 2.1.0 wurde auf einem lokalen `main` gebaut, dem die beiden
+Commits aus 2.0.0 fehlten — der Lizenzwechsel auf proprietär und dessen
+CHANGELOG-Eintrag. Der Tag zeigt deshalb auf einen Stand, der `composer.json`
+und die Lizenzdatei noch mit MIT führt.
+
+Am Code des Addons ändert sich zwischen 2.1.0 und 2.1.1 nichts: identische
+Klassen, identische Tests. Was dazukommt, ist der Merge mit 2.0.0.
+
+`v2.1.0` bleibt, wo es ist. Eine veröffentlichte Version ist unveränderlich, und
+Packagist hat das Umhängen des Tags korrekt abgelehnt — der Weg dafür ist eine
+neue Version, nicht ein bewegter Tag.
+
 ## 2.1.0 — 2026-08-14
 
 ### Added — Vorlagen gehören zu einer Marke
