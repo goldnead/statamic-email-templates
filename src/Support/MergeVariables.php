@@ -2,6 +2,9 @@
 
 namespace Goldnead\EmailTemplates\Support;
 
+use Goldnead\BrandContext\Contracts\SenderIdentityResolver;
+use Goldnead\BrandContext\Facades\BrandContext;
+
 /**
  * Merge-variable substitution for email templates.
  *
@@ -46,10 +49,7 @@ class MergeVariables
                 'email' => 'maria.beispiel@example.com',
                 'salutation' => 'Hallo Maria',
             ],
-            'sender' => [
-                'name' => config('mail.from.name') ?: config('app.name') ?: 'Sender',
-                'email' => config('mail.from.address') ?: 'info@example.com',
-            ],
+            'sender' => self::previewSender(),
             'unsubscribe_url' => 'https://example.com/newsletter/abmelden',
             'date' => date('d.m.Y'),
         ];
@@ -119,5 +119,56 @@ class MergeVariables
         }
 
         return $result;
+    }
+
+    /**
+     * The sender the preview shows.
+     *
+     * Until 2026-08-24 this read `config('mail.from.*')` unconditionally, so on
+     * a multi-brand host every brand's template previewed with the same — and
+     * for all but one brand, wrong — sender. Nothing was ever *sent* that way,
+     * but a preview whose From is a lie is a preview you cannot use to check
+     * the one thing you opened it for.
+     *
+     * The coupling is optional on purpose: this package does not require
+     * statamic-brand-context, and an installation without it must keep working
+     * unchanged. Hence class_exists rather than a composer dependency, which is
+     * the same arrangement the rest of the family uses.
+     *
+     * @return array<string, string>
+     */
+    protected static function previewSender(): array
+    {
+        $fallback = [
+            'name' => config('mail.from.name') ?: config('app.name') ?: 'Sender',
+            'email' => config('mail.from.address') ?: 'info@example.com',
+        ];
+
+        if (! class_exists(BrandContext::class)) {
+            return $fallback;
+        }
+
+        try {
+            $resolver = app(SenderIdentityResolver::class);
+            $identity = $resolver->resolve(null);
+
+            // A refusing identity is exactly what the preview should surface —
+            // but not by inventing an address. The fallback keeps the preview
+            // readable; the refusal already speaks in the log, and the send path
+            // is where it stops anything.
+            if ($identity->fromAddress === null) {
+                return $fallback;
+            }
+
+            return [
+                'name' => $identity->fromName ?: $fallback['name'],
+                'email' => $identity->fromAddress,
+            ];
+        } catch (\Throwable) {
+            // brand-context present but not bootable here (no brand, no
+            // container binding, a driver that needs a database). The preview is
+            // not worth an exception.
+            return $fallback;
+        }
     }
 }

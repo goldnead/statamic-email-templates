@@ -1,5 +1,22 @@
 # Changelog
 
+## 2.2.0 — 2026-08-24
+
+### Fixed — die Vorschau zeigte jeder Marke denselben Absender
+
+`MergeVariables` löste `{{ sender.name }}` und `{{ sender.email }}` aus
+`config('mail.from.*')` auf. Auf einem Host mit mehreren Marken hieß das: jede
+Vorlage wurde mit demselben Absender vorgeschaut, und für alle Marken bis auf
+eine war er falsch. **Gesendet wurde so nie etwas** — die Vorschau ist ein
+eigener Weg — aber eine Vorschau, deren Absender gelogen ist, taugt nicht für
+das eine, wofür man sie aufmacht.
+
+Steht `statamic-brand-context` zur Verfügung, kommt der Absender jetzt von der
+aktuellen Marke. **Die Kopplung ist optional** (`class_exists`, dazu ein
+`suggest`-Eintrag): dieses Paket verlangt brand-context nicht, und eine
+Installation ohne es verhält sich unverändert.
+
+
 All notable changes to `statamic-email-templates` are documented here.
 
 This file was reconstructed from the release tags on 2026-07-30; entries up to
