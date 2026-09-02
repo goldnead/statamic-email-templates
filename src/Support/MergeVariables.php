@@ -88,8 +88,11 @@ class MergeVariables
      * used as an `href` attribute value as well as visible text.
      *
      * A sending addon that wants to hand a template ready-made markup — an
-     * order table, a list of lines — escapes the parts itself and gets its key
-     * named here. Until it is named here, its markup arrives as text.
+     * order table, a list of lines — escapes the parts itself and names its own
+     * key in the `$raw` argument of {@see self::apply()}. Its key does not
+     * belong in this constant: this list holds the keys *this* package supplies,
+     * and a name added here is raw for every consumer, including the ones that
+     * never escaped it.
      *
      * @var list<string>
      */
@@ -108,6 +111,13 @@ class MergeVariables
      * plain-text part. Escaping there would put a literal `&amp;` in front of a
      * reader rather than protect one.
      *
+     * `$raw` names further keys of *the caller's own* data that already carry
+     * markup — statamic-funnels builds `order.lines` from `e()`-escaped parts
+     * joined with `<br>`, because a list of order lines cannot reach an HTML
+     * mail without a separator that is markup. The caller declares its own key
+     * per call instead of it being raw for everyone, and the escaping still
+     * happens exactly once per value.
+     *
      * The escaping happens in this first pass only. {@see FunctionTags} runs
      * afterwards over the same text and emits markup of its own
      * (`{{ countdown_image }}` is an `<img>`), which escapes its own parts and
@@ -115,25 +125,27 @@ class MergeVariables
      * what keeps that true.
      *
      * @param  array<string,mixed>  $data
+     * @param  list<string>  $raw  Further keys of the caller's own data that carry markup.
      */
-    public static function apply(string $text, array $data, bool $escape = true): string
+    public static function apply(string $text, array $data, bool $escape = true, array $raw = []): string
     {
         if ($text === '') {
             return '';
         }
 
         $flat = self::flatten($data);
+        $rawKeys = $raw === [] ? self::RAW_VARIABLES : array_merge(self::RAW_VARIABLES, $raw);
 
         $text = (string) preg_replace_callback(
             '/\{\{\s*([a-zA-Z0-9_.]+)\s*\}\}/',
-            function (array $m) use ($flat, $escape) {
+            function (array $m) use ($flat, $escape, $rawKeys) {
                 if (! array_key_exists($m[1], $flat)) {
                     return $m[0];
                 }
 
                 $value = (string) $flat[$m[1]];
 
-                return $escape && ! in_array($m[1], self::RAW_VARIABLES, true)
+                return $escape && ! in_array($m[1], $rawKeys, true)
                     ? e($value)
                     : $value;
             },

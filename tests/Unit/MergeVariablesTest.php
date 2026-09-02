@@ -135,6 +135,17 @@ it('leaves the keys named in RAW_VARIABLES raw', function () {
     ))->toBe('<a href="https://example.com/abmelden?id=7&sig=abc">Abmelden</a>');
 });
 
+it('leaves a key the caller names raw for this call', function () {
+    // The consumer's own markup-carrying key — statamic-funnels' `order.lines`,
+    // built from e()-escaped parts joined with `<br>`. Declared per call, so it
+    // is not raw for every other consumer of this class.
+    $data = ['order' => ['lines' => 'Kurs &amp; Buch – 49,00<br>Heft – 9,00'], 'name' => 'Müller & Söhne'];
+
+    expect(MergeVariables::apply('<p>{{ name }}</p>{{ order.lines }}', $data, raw: ['order.lines']))
+        ->toBe('<p>Müller &amp; Söhne</p>Kurs &amp; Buch – 49,00<br>Heft – 9,00')
+        ->not->toContain('&amp;amp;');
+});
+
 it('substitutes verbatim when the caller asks for raw output', function () {
     // What a subject line and a plain-text part get: neither is HTML, and an
     // escaped `&` would be visible to the reader as `&amp;`.

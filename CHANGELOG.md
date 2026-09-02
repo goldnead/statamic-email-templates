@@ -48,9 +48,17 @@ Skalare werden jetzt beim Einsetzen mit `e()` escaped. Zwei Ausnahmen, beide
 benannt statt stillschweigend:
 
 - **`MergeVariables::RAW_VARIABLES`** — heute `unsubscribe_url`, eine Adresse
-  dieses Pakets, die als `href` gebraucht wird. Wer einer Vorlage fertiges
-  Markup übergibt, escaped dessen Teile selbst und lässt seinen Schlüssel hier
-  eintragen; bis dahin kommt sein Markup als Text an.
+  dieses Pakets, die als `href` gebraucht wird. Hier stehen nur die Schlüssel,
+  die **dieses** Paket liefert: ein Name hier ist für jeden Konsumenten roh,
+  auch für die, die ihn nie escapt haben.
+- **`apply($text, $data, raw: ['order.lines'])`** — für Schlüssel, die der
+  Aufrufer selbst liefert und die schon Markup tragen. `statamic-funnels` baut
+  `order.lines` aus `e()`-escapten Teilen mit `<br>` dazwischen, weil eine Liste
+  von Bestellzeilen ohne Trenner-Markup nicht in eine HTML-Mail kommt. Der
+  Aufrufer nennt seinen Schlüssel pro Aufruf, statt ihn für alle roh zu machen,
+  und escaped wird weiterhin genau einmal je Wert. Positional übergeben, nicht
+  benannt: ein Konsument, der noch gegen 2.2.x läuft, ignoriert zusätzliche
+  Argumente stillschweigend, ein unbekanntes benanntes Argument wäre ein Fatal.
 - **`apply($text, $data, escape: false)`** — für Ausgaben, die kein HTML sind:
   Betreffzeile und Plaintext-Teil. Dort wäre ein `&amp;` sichtbarer Schaden
   statt Schutz. Die Live-Vorschau ruft so für Betreff und Preheader auf: beide
