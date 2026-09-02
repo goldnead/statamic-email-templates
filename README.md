@@ -86,14 +86,29 @@ documented sample set, so a template can be previewed without a real contact.
 ```php
 use Goldnead\EmailTemplates\Support\MergeVariables;
 
-$subject = MergeVariables::apply($template->subject, [
-    'contact' => ['first_name' => $user->first_name],
-]);
+// The body is HTML: values are escaped.
+$html = MergeVariables::apply($template->body, $data);
+
+// The subject is not HTML: ask for raw output, or the reader sees `&amp;`.
+$subject = MergeVariables::apply($template->subject, $data, escape: false);
 ```
 
 Unknown tags are **left visible** rather than silently removed, so a typo shows up
-in the preview instead of in someone's inbox. Values are inserted verbatim, without
-HTML escaping — sanitise recipient-controlled data before you pass it in.
+in the preview instead of in someone's inbox.
+
+**Values are HTML-escaped on the way in.** A merge value is recipient data — a name
+from a signup form — and a name containing `<script>` belongs in the mail as text,
+not as markup. Two exceptions:
+
+- Keys named in `MergeVariables::RAW_VARIABLES` are inserted raw. Today that is
+  `unsubscribe_url`, an address this package builds and that is used as an `href`.
+  Hand a template ready-made markup (an order table, a list of lines) only if you
+  escaped its parts yourself and the key is named there.
+- `escape: false` turns escaping off for the whole call. Use it for output that is
+  not HTML: the subject line and a plain-text part.
+
+`{{ countdown_image }}` emits an `<img>` of its own. It is resolved after the
+escaping pass and escapes its own attributes, so its markup arrives intact.
 
 The default sample set, overridable via `email-templates.preview.sample_data`:
 

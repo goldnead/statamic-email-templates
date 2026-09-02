@@ -35,6 +35,37 @@ Durchlauf für Tags mit Parametern, nach den einfachen `{{ dotted.key }}`),
 `routes/actions.php`, die Sprachdatei `countdown.php` (de/en) und der
 Config-Schlüssel `countdown.image`.
 
+### Fixed — eingesetzte Werte landeten roh im HTML der Mail
+
+`MergeVariables::apply()` setzte jeden gelieferten Wert unverändert ein. Ein
+Name aus einem Formular mit `<script>` darin wurde damit zu Markup in einer Mail
+— dieselbe Klasse Fehler, die am selben Tag in `statamic-payments` behoben
+wurde. Die README nannte das ausdrücklich als Eigenschaft („inserted verbatim");
+das war eine Zusage, die niemand einlösen konnte, weil das versendende Addon den
+HTML-Kontext nicht kennt, in den sein Wert fällt.
+
+Skalare werden jetzt beim Einsetzen mit `e()` escaped. Zwei Ausnahmen, beide
+benannt statt stillschweigend:
+
+- **`MergeVariables::RAW_VARIABLES`** — heute `unsubscribe_url`, eine Adresse
+  dieses Pakets, die als `href` gebraucht wird. Wer einer Vorlage fertiges
+  Markup übergibt, escaped dessen Teile selbst und lässt seinen Schlüssel hier
+  eintragen; bis dahin kommt sein Markup als Text an.
+- **`apply($text, $data, escape: false)`** — für Ausgaben, die kein HTML sind:
+  Betreffzeile und Plaintext-Teil. Dort wäre ein `&amp;` sichtbarer Schaden
+  statt Schutz. Die Live-Vorschau ruft so für Betreff und Preheader auf: beide
+  werden an ihrem Ausgabeort schon einmal escaped (`htmlspecialchars` im
+  Vorschau-Dokument bzw. in `EmailPreheader::html()`), ein zweites Mal ergäbe
+  `&amp;amp;`.
+
+Die Reihenfolge in `apply()` bleibt: erst die einfachen `{{ dotted.key }}` mit
+Escaping, danach `FunctionTags`. Das `<img>` von `{{ countdown_image }}`
+entsteht also **nach** dem Escaping und escaped seine eigenen Attribute, bleibt
+somit ein `<img>`.
+
+**Für Aufrufer:** wer heute `apply()` für eine Betreffzeile benutzt, muss
+`escape: false` nachtragen, sonst steht `&amp;` im Betreff.
+
 ## 2.2.0 — 2026-08-24
 
 ### Fixed — die Vorschau zeigte jeder Marke denselben Absender

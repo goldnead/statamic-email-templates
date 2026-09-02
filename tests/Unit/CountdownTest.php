@@ -180,6 +180,29 @@ it('passes colours and label through and clamps the width', function () {
         ->toContain('label=Bis%20zum%20Kursstart');
 });
 
+it('emits the image tag as markup while escaping the values around it', function () {
+    // The escaping pass runs *before* the function tags, so an `<img>` this
+    // class builds itself is never escaped, while a name in the same paragraph
+    // is. Both properties in one assertion on purpose: they are the two halves
+    // of the same ordering decision.
+    $html = MergeVariables::apply(
+        '<p>Hallo {{ name }}</p>{{ countdown_image until="2026-10-01 18:00" }}',
+        ['name' => '<b>Maria</b>']
+    );
+
+    expect($html)->toContain('<p>Hallo &lt;b&gt;Maria&lt;/b&gt;</p>')
+        ->toContain('<img src="')
+        ->not->toContain('&lt;img')
+        ->not->toContain('&amp;amp;');
+});
+
+it('takes until from a variable that went through the escaping pass', function () {
+    $data = ['event' => ['starts_at' => '2026-10-01 18:00']];
+
+    expect(MergeVariables::apply('<p>{{ countdown until="{{ event.starts_at }}" format="relative" }}</p>', $data))
+        ->toBe('<p>noch 3 Tage, 4 Stunden</p>');
+});
+
 it('leaves an invalid colour at its default', function () {
     expect(CountdownImage::colour('nope', 'ffffff'))->toBe('ffffff')
         ->and(CountdownImage::colour('#ABC', 'ffffff'))->toBe('aabbcc');

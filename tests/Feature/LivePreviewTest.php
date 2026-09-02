@@ -69,6 +69,36 @@ it('renders the live-preview email html from a token', function () {
         ->toContain('Hallo Maria');
 });
 
+it('escapes a sample value in the body but not in the subject', function () {
+    // The subject is escaped once by the preview document itself; escaping it
+    // in the merge pass as well would show the author `&amp;` where they wrote
+    // `&`. The body is HTML and is escaped in the merge pass.
+    config()->set('email-templates.preview.sample_data', [
+        'contact' => ['first_name' => 'Müller & <b>Söhne</b>'],
+    ]);
+
+    [$entry] = app(EmailTemplateCollectionManager::class)->upsert(new EmailTemplateData(
+        slug: 'escaping',
+        title: 'Escaping',
+        subject: 'Post von {{ contact.first_name }}',
+        body: '<p>Hallo {{ contact.first_name }}.</p>',
+    ));
+
+    LivePreview::tokenize('lp-escaping', $entry);
+
+    $content = $this->get('/'.EmailTemplateCollectionManager::LIVE_PREVIEW_ROUTE.'?token=lp-escaping')
+        ->assertOk()
+        ->getContent();
+
+    expect($content)
+        // Body: escaped exactly once, the markup arrives as text.
+        ->toContain('Hallo Müller &amp; &lt;b&gt;Söhne&lt;/b&gt;.')
+        ->not->toContain('&amp;amp;')
+        // Subject: escaped by the preview document, not by the merge pass.
+        ->toContain('Post von Müller &amp; &lt;b&gt;Söhne&lt;/b&gt;')
+        ->not->toContain('<b>Söhne</b>');
+});
+
 it('renders the countdown tags in the live preview', function () {
     config()->set('app.timezone', 'Europe/Berlin');
     app()->setLocale('de');

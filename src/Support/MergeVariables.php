@@ -31,6 +31,11 @@ use Goldnead\BrandContext\Facades\BrandContext;
  *
  * Unknown tags are left untouched so an author can *see* a missing/typo'd
  * variable in the preview rather than have it silently vanish.
+ *
+ * Substituted values are HTML-escaped unless their key is in
+ * {@see self::RAW_VARIABLES}, or unless the caller asks for raw output with
+ * `escape: false` — which is what a subject line and a plain-text part do,
+ * because neither is HTML.
  */
 class MergeVariables
 {
@@ -75,12 +80,43 @@ class MergeVariables
     }
 
     /**
+     * The keys whose value is inserted raw, without escaping.
+     *
+     * Everything else is escaped, so the list is the whole trust boundary and
+     * has to earn each entry. `unsubscribe_url` is an address this package (or
+     * the sending sibling) builds, never something a recipient typed, and it is
+     * used as an `href` attribute value as well as visible text.
+     *
+     * A sending addon that wants to hand a template ready-made markup — an
+     * order table, a list of lines — escapes the parts itself and gets its key
+     * named here. Until it is named here, its markup arrives as text.
+     *
+     * @var list<string>
+     */
+    public const RAW_VARIABLES = ['unsubscribe_url'];
+
+    /**
      * Replace every `{{ dotted.key }}` tag in $text with its value from $data.
      * Tolerant of surrounding whitespace; leaves unknown tags in place.
      *
+     * Values are HTML-escaped on the way in. A merge value is recipient data —
+     * a name from a signup form, a chair's answer to a question — and a name
+     * containing `<script>` belongs in the mail as text, not as markup. The
+     * exceptions are named in {@see self::RAW_VARIABLES}.
+     *
+     * `$escape` is false for output that is not HTML: the subject line and a
+     * plain-text part. Escaping there would put a literal `&amp;` in front of a
+     * reader rather than protect one.
+     *
+     * The escaping happens in this first pass only. {@see FunctionTags} runs
+     * afterwards over the same text and emits markup of its own
+     * (`{{ countdown_image }}` is an `<img>`), which escapes its own parts and
+     * must not be escaped again here — running it after the substitution is
+     * what keeps that true.
+     *
      * @param  array<string,mixed>  $data
      */
-    public static function apply(string $text, array $data): string
+    public static function apply(string $text, array $data, bool $escape = true): string
     {
         if ($text === '') {
             return '';
@@ -90,8 +126,16 @@ class MergeVariables
 
         $text = (string) preg_replace_callback(
             '/\{\{\s*([a-zA-Z0-9_.]+)\s*\}\}/',
-            function (array $m) use ($flat) {
-                return array_key_exists($m[1], $flat) ? (string) $flat[$m[1]] : $m[0];
+            function (array $m) use ($flat, $escape) {
+                if (! array_key_exists($m[1], $flat)) {
+                    return $m[0];
+                }
+
+                $value = (string) $flat[$m[1]];
+
+                return $escape && ! in_array($m[1], self::RAW_VARIABLES, true)
+                    ? e($value)
+                    : $value;
             },
             $text
         );

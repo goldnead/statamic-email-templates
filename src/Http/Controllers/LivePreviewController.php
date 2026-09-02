@@ -48,8 +48,12 @@ class LivePreviewController extends Controller
 
         $sample = MergeVariables::sampleData();
 
-        $subject = MergeVariables::apply((string) ($entry->value('subject') ?? ''), $sample);
-        $preview = MergeVariables::apply((string) ($entry->value('preview') ?? ''), $sample);
+        // Only the body is HTML. The subject is escaped once on its way into
+        // this page's markup (`$this->e()`), and the preheader once inside
+        // `EmailPreheader::html()` — escaping them here as well would show the
+        // author `&amp;` where they wrote `&`.
+        $subject = MergeVariables::apply((string) ($entry->value('subject') ?? ''), $sample, escape: false);
+        $preview = MergeVariables::apply((string) ($entry->value('preview') ?? ''), $sample, escape: false);
         $bodyHtml = MergeVariables::apply($this->renderer->render($entry->value('body')), $sample);
 
         // Mirror the send path: the hidden preheader rides at the very top of

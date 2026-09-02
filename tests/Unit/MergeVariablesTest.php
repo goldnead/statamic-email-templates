@@ -106,14 +106,40 @@ it('renders a stringable object through __toString', function () {
 
 // -- Escaping: the documented trust boundary -------------------------------
 
-it('substitutes values verbatim, without HTML escaping', function () {
-    // Documented, deliberate: `apply()` runs over the plain-text subject and the
-    // HTML body through one code path, and a merge value may legitimately be a
-    // URL or a small HTML snippet. It therefore does NOT escape. Anything that
-    // feeds recipient-controlled data into a template is responsible for
-    // sanitising it first. Pinned here so the behaviour cannot change silently.
+it('escapes a substituted value on its way into HTML', function () {
+    // A merge value is recipient data. A name carrying markup belongs in the
+    // mail as text; until 02.09.2026 it landed as markup, in a mail sent to an
+    // address nobody had verified.
     expect(MergeVariables::apply('<p>{{ name }}</p>', ['name' => '<b>Maria</b>']))
-        ->toBe('<p><b>Maria</b></p>');
+        ->toBe('<p>&lt;b&gt;Maria&lt;/b&gt;</p>');
+});
+
+it('escapes a script tag in a value', function () {
+    expect(MergeVariables::apply('<p>Hallo {{ name }}</p>', ['name' => '<script>alert(1)</script>']))
+        ->toBe('<p>Hallo &lt;script&gt;alert(1)&lt;/script&gt;</p>')
+        ->not->toContain('<script>');
+});
+
+it('escapes an ampersand exactly once', function () {
+    expect(MergeVariables::apply('{{ choir }}', ['choir' => 'Müller & Söhne']))
+        ->toBe('Müller &amp; Söhne')
+        ->not->toContain('&amp;amp;');
+});
+
+it('leaves the keys named in RAW_VARIABLES raw', function () {
+    expect(MergeVariables::RAW_VARIABLES)->toContain('unsubscribe_url');
+
+    expect(MergeVariables::apply(
+        '<a href="{{ unsubscribe_url }}">Abmelden</a>',
+        ['unsubscribe_url' => 'https://example.com/abmelden?id=7&sig=abc']
+    ))->toBe('<a href="https://example.com/abmelden?id=7&sig=abc">Abmelden</a>');
+});
+
+it('substitutes verbatim when the caller asks for raw output', function () {
+    // What a subject line and a plain-text part get: neither is HTML, and an
+    // escaped `&` would be visible to the reader as `&amp;`.
+    expect(MergeVariables::apply('Post von {{ choir }}', ['choir' => 'Müller & Söhne'], escape: false))
+        ->toBe('Post von Müller & Söhne');
 });
 
 it('does not re-process a substituted value that itself looks like a tag', function () {
