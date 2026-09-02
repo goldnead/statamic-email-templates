@@ -2,6 +2,13 @@
 
 ## 2.3.0 — 2026-09-02
 
+> **Wer `goldnead/statamic-funnels` einsetzt, hebt es zusammen mit dieser Fassung auf 1.9.1.**
+> Seit dieser Fassung escaped `MergeVariables::apply()` die eingesetzten Werte. funnels 1.9.0
+> und älter reicht seine Bestellzeilen bereits als fertiges Markup herein und seinen Betreff
+> ohne Schalter; mit 2.3.0 allein stünde in der Mail dann `&amp;lt;br&amp;gt;` statt eines
+> Zeilenumbruchs. 1.9.1 benennt seine eigene Roh-Variable und schickt den Betreff ungeschützt.
+> Die beiden Fassungen gehören in denselben Schritt.
+
 ### Added — Countdown in einer Mail
 
 Zwei neue Tags für Launch-Mails (Kursstart, Anmeldeschluss), aufgelöst vom
