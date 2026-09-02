@@ -1,5 +1,40 @@
 # Changelog
 
+## 2.3.0 — 2026-09-02
+
+### Added — Countdown in einer Mail
+
+Zwei neue Tags für Launch-Mails (Kursstart, Anmeldeschluss), aufgelöst vom
+selben `MergeVariables::apply()`-Durchlauf wie alle anderen Variablen, also in
+der Live-Vorschau und beim Versand gleich:
+
+- `{{ countdown until="2026-10-01 18:00" }}` schreibt zum Renderzeitpunkt
+  „noch 3 Tage, 4 Stunden (01.10.2026, 18:00 Uhr)". Zeitzone aus `app.timezone`,
+  Deutsch und Englisch nach App-Locale, `format="relative|absolute|both"`,
+  `expired="…"` für den Text nach Ablauf (Standard „vorbei"). `until` darf eine
+  Variable sein: `until="{{ event.starts_at }}"` oder `until="event.starts_at"`.
+  Ein `until`, das sich nicht auflösen lässt, lässt den Tag stehen, wie jede
+  unbekannte Variable. **Das ist die Fassung für neun von zehn Fällen:** kein
+  Bild, keine Route, funktioniert in jedem Client.
+- `{{ countdown_image until="…" width="480" }}` rendert ein `<img>` auf die
+  neue signierte Route `GET /!/statamic-email-templates/countdown.png` (Query
+  `until`, `w`, `bg`, `fg`, `label`, `expired`; `throttle:60,1`;
+  `Cache-Control: max-age=60`). GD zeichnet „dd : hh : mm" als Siebensegment-
+  Anzeige, nach Ablauf `00 : 00 : 00` plus „vorbei". Ohne `ext-gd` oder mit
+  `email-templates.countdown.image => false` antwortet die Route 404 und
+  schreibt eine Warnung ins Log. Ohne gültige Signatur 403.
+
+Die README sagt, was man sich mit dem Bild einkauft: Gmail holt es über seinen
+Proxy bei jedem Öffnen neu (und jedes Öffnen ist eine Anfrage an den Server),
+Apple Mail Privacy Protection holt es einmal vorab und zeigt danach dauerhaft
+diesen Stand.
+
+Dafür kamen `Support\Countdown`, `Support\FunctionTags` (der zweite, schmale
+Durchlauf für Tags mit Parametern, nach den einfachen `{{ dotted.key }}`),
+`Support\CountdownImage`, `Http\Controllers\CountdownImageController`,
+`routes/actions.php`, die Sprachdatei `countdown.php` (de/en) und der
+Config-Schlüssel `countdown.image`.
+
 ## 2.2.0 — 2026-08-24
 
 ### Fixed — die Vorschau zeigte jeder Marke denselben Absender

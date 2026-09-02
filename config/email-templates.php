@@ -105,4 +105,21 @@ return [
         ],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Countdown
+    |--------------------------------------------------------------------------
+    |
+    | `{{ countdown until="2026-10-01 18:00" }}` prints the remaining time as
+    | text at render time and needs nothing from here. `{{ countdown_image }}`
+    | serves a PNG from `/!/email-templates/countdown.png` (signed URL,
+    | rate-limited) and needs ext-gd. `image` turns that endpoint off entirely;
+    | with it off, or without GD, the endpoint answers 404 and logs a warning.
+    |
+    */
+
+    'countdown' => [
+        'image' => true,
+    ],
+
 ];

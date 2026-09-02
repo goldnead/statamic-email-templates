@@ -88,13 +88,18 @@ class MergeVariables
 
         $flat = self::flatten($data);
 
-        return (string) preg_replace_callback(
+        $text = (string) preg_replace_callback(
             '/\{\{\s*([a-zA-Z0-9_.]+)\s*\}\}/',
             function (array $m) use ($flat) {
                 return array_key_exists($m[1], $flat) ? (string) $flat[$m[1]] : $m[0];
             },
             $text
         );
+
+        // Second pass, after the plain tags: `{{ countdown until="…" }}` and
+        // friends take parameters, and a parameter may itself have been a
+        // plain tag a moment ago. See FunctionTags for the tag list.
+        return FunctionTags::apply($text, $flat);
     }
 
     /**

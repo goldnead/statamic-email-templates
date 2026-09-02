@@ -109,6 +109,57 @@ The default sample set, overridable via `email-templates.preview.sample_data`:
 | `{{ unsubscribe_url }}` | `https://example.com/newsletter/abmelden` |
 | `{{ date }}` | today, `d.m.Y` |
 
+### Countdown
+
+For launch mails — a course opens, registration closes — a template can print how long
+is left. Two tags, resolved by the same `MergeVariables::apply()` pass as everything else.
+
+**Text (use this one):**
+
+```
+{{ countdown until="2026-10-01 18:00" }}
+→ noch 3 Tage, 4 Stunden (01.10.2026, 18:00 Uhr)
+```
+
+The time is computed **when the mail is rendered** and then stands still, like everything
+else in an email. That is honest: the recipient reads "sent when there were 3 days left"
+and the absolute date next to it stays right forever. It works in every mail client, needs
+no route and no image. For nine out of ten launch mails this is all you want.
+
+| Parameter | Effect |
+| --- | --- |
+| `until` | Required. A date Carbon can parse, read in `app.timezone`; or a variable — `until="{{ event.starts_at }}"` and `until="event.starts_at"` both work |
+| `format` | `both` (default), `relative` ("noch 3 Tage, 4 Stunden") or `absolute` ("01.10.2026, 18:00 Uhr") |
+| `expired` | Text once the moment has passed; default "vorbei" / "over" |
+
+The relative part names the two largest non-zero units and switches to "noch weniger als
+eine Minute" under a minute. German and English follow the app locale. A tag whose `until`
+cannot be resolved is left standing, like any unknown variable.
+
+**Image (on request only):**
+
+```
+{{ countdown_image until="2026-10-01 18:00" width="480" label="Bis zum Kursstart" }}
+```
+
+renders an `<img>` pointing at `GET /!/statamic-email-templates/countdown.png?…`, a
+signed, rate-limited (`throttle:60,1`) route that draws "dd : hh : mm" with GD at the
+moment the client fetches it, cached for 60 seconds. After the moment has passed it shows
+`00 : 00 : 00` and the expired text. Parameters: `width` (200–1200, default 600), `bg` and
+`fg` as hex colours, `label`, `expired`, `alt`. Needs `ext-gd`; without it the route answers
+404 and logs a warning. `email-templates.countdown.image => false` switches it off.
+
+Know what you are buying before you use it:
+
+- **Gmail** fetches images through its proxy on every open, so the picture is current each
+  time — and each open is a request to your server.
+- **Apple Mail Privacy Protection** fetches every image once, in advance, from Apple's
+  servers, at a moment of Apple's choosing. From then on the recipient sees that cached
+  frame: a countdown that is wrong by however long ago Apple looked.
+- **Outlook desktop** blocks remote images until the reader allows them.
+
+None of that touches the text tag, which is why it comes first.
+
 ### Live Preview
 
 Open a template and press Statamic's Live Preview button: the split-screen renders

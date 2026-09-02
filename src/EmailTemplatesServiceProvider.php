@@ -42,6 +42,8 @@ class EmailTemplatesServiceProvider extends AddonServiceProvider
      */
     protected $routes = [
         'web' => __DIR__.'/../routes/web.php',
+        // Under Statamic's action prefix (`/!/`): the PNG behind {{ countdown_image }}.
+        'actions' => __DIR__.'/../routes/actions.php',
     ];
 
     public function register(): void
