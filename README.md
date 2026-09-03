@@ -315,10 +315,32 @@ The body is stored as Bard (ProseMirror nodes) and rendered to HTML at send and
 preview time by `BardHtmlRenderer` — one path, so the preview and the real email are
 produced identically. Imported HTML is converted to Bard nodes by `HtmlToBard`.
 
-**Fidelity note:** tiptap's schema keeps structural markup (headings, lists, links,
-images, tables) and drops inline styles and unknown attributes. Simple transactional
+Both directions share one tiptap extension list, `TiptapExtensions`. A node added
+there is added to the parse and the render side at once, which is what keeps them
+from disagreeing about what a template may contain.
+
+**Fidelity note:** the schema keeps headings, lists, links and images, and drops
+inline styles and unknown attributes. **Tables are not kept.** Simple transactional
 templates round-trip cleanly; heavily styled legacy marketing HTML may lose styling.
 Put the styling in a layout rather than in the body.
+
+### Images
+
+An `<img>` in a body survives both directions, and two things are done to it on the
+way into the mail:
+
+- **A relative source is made absolute.** A Statamic asset is stored as
+  `/assets/flyer.png`. That resolves against your site in a browser and against
+  nothing at all in an inbox — the recipient sees a broken image and no error is
+  logged anywhere. Sources that are already absolute, protocol-relative, `data:` or
+  `cid:` are left alone. The base is your `app.url`, so set it correctly.
+- **`max-width:100%;height:auto;border:0;` is added inline.** Without `max-width` a
+  1200px header graphic forces a sideways scroll in a phone client that ignores the
+  viewport. `border` rides in the style rather than as `border="0"` because
+  tiptap-php cannot emit an attribute whose value is `0`.
+
+Images are referenced by URL, not attached — mail clients fetch them, and many
+block that until the reader allows it. Give every image a meaningful `alt`.
 
 ## Support
 

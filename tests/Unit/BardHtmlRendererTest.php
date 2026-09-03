@@ -2,6 +2,91 @@
 
 use Goldnead\EmailTemplates\Support\BardHtmlRenderer;
 use Goldnead\EmailTemplates\Support\HtmlToBard;
+use Illuminate\Support\Facades\URL;
+
+/**
+ * Images, both directions (2.5.0).
+ *
+ * Until 2.4.0 a picture was lost twice over: `HtmlToBard` parsed HTML with a
+ * tiptap schema that has no `image` node, so `<img>` never became a node, and
+ * `BardHtmlRenderer` rendered an `image` node it was handed as the empty
+ * string. Neither said anything. The two now share one extension list
+ * (`TiptapExtensions`), so a node added for one direction is added for both.
+ */
+it('renders an image node instead of swallowing it', function () {
+    $nodes = [['type' => 'image', 'attrs' => ['src' => 'https://example.com/flyer.png', 'alt' => 'Flyer']]];
+
+    expect((new BardHtmlRenderer)->render($nodes))
+        ->toContain('<img')
+        ->toContain('https://example.com/flyer.png')
+        ->toContain('Flyer');
+});
+
+it('keeps an image when HTML is converted to Bard', function () {
+    $nodes = (new HtmlToBard)->convert('<p><img src="https://example.com/flyer.png" alt="Flyer"></p>');
+
+    $types = collect($nodes)->flatMap(fn ($n) => collect($n['content'] ?? [])->pluck('type'))->all();
+
+    expect($types)->toContain('image');
+});
+
+it('round-trips an image through Bard and back', function () {
+    $html = (new BardHtmlRenderer)->render(
+        (new HtmlToBard)->convert('<p>Vor <img src="https://example.com/flyer.png" alt="Flyer"> nach</p>')
+    );
+
+    expect($html)
+        ->toContain('https://example.com/flyer.png')
+        ->toContain('Vor')
+        ->toContain('nach');
+});
+
+it('gives every image the inline styles a mail client needs', function () {
+    // Not decoration: a 1200px header graphic without max-width forces a
+    // sideways scroll in a phone client that ignores the viewport.
+    $html = (new BardHtmlRenderer)->render(
+        [['type' => 'image', 'attrs' => ['src' => 'https://example.com/flyer.png']]]
+    );
+
+    expect($html)
+        ->toContain('max-width:100%')
+        ->toContain('height:auto')
+        // In CSS, not as border="0" — tiptap-php's renderAttributes() runs the
+        // attribute array through array_filter(), and '0' is falsy in PHP.
+        ->toContain('border:0');
+});
+
+it('makes a relative image source absolute, in nodes and in raw HTML alike', function () {
+    URL::forceScheme('https');
+    URL::forceRootUrl('https://nordlicht.example');
+
+    $renderer = new BardHtmlRenderer;
+
+    $fromNodes = $renderer->render([['type' => 'image', 'attrs' => ['src' => '/assets/flyer.png']]]);
+    // The raw-string path carries imported legacy templates, which hold the
+    // same relative paths and would break the same way.
+    $fromString = $renderer->render('<p><img src="/assets/flyer.png" alt="Flyer"></p>');
+
+    expect($fromNodes)->toContain('https://nordlicht.example/assets/flyer.png')
+        ->and($fromString)->toContain('https://nordlicht.example/assets/flyer.png');
+});
+
+it('leaves an absolute, protocol-relative, data or cid image source alone', function () {
+    URL::forceScheme('https');
+    URL::forceRootUrl('https://nordlicht.example');
+
+    $renderer = new BardHtmlRenderer;
+
+    // Rewriting any of these would break an embedded or attached image.
+    expect($renderer->render('<img src="https://cdn.example/flyer.png">'))
+        ->toContain('src="https://cdn.example/flyer.png"')
+        ->and($renderer->render('<img src="//cdn.example/flyer.png">'))
+        ->toContain('src="//cdn.example/flyer.png"')
+        ->and($renderer->render('<img src="cid:flyer">'))
+        ->toContain('src="cid:flyer"')
+        ->and($renderer->render('<img src="data:image/gif;base64,R0lGOD">'))
+        ->toContain('src="data:image/gif;base64,R0lGOD"');
+});
 
 it('renders ProseMirror nodes to HTML', function () {
     $nodes = [[

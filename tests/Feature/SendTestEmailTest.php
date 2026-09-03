@@ -4,6 +4,7 @@ use Goldnead\EmailTemplates\Actions\SendTestEmail;
 use Goldnead\EmailTemplates\Services\EmailTemplateCollectionManager;
 use Goldnead\EmailTemplates\Support\EmailTemplateData;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\URL;
 use Statamic\Facades\Action;
 use Statamic\Facades\Collection;
 use Statamic\Facades\CP\Toast;
@@ -176,23 +177,37 @@ it('refuses a template with an empty body and says so in red', function () {
         ->and($toasts->first()->toArray()['message'])->toContain('Willkommen');
 });
 
-/**
- * Documents a gap rather than a feature, so it stays visible.
- *
- * An image-only body is a real kind of email — a flyer, a header graphic — and
- * this package cannot carry one: `HtmlToBard` drops `<img>` on import (its own
- * docblock claims it keeps images) and `BardHtmlRenderer` renders a ProseMirror
- * `image` node as the empty string. The action's empty-body refusal is
- * therefore correct today, and this test is what fails when that changes,
- * pointing at the refusal that would then need an exception for pictures.
- */
-it('cannot carry an image-only body, so the refusal is right for now', function () {
+it('sends an image-only body — a picture is content', function () {
+    // Wordless on purpose: `strip_tags` leaves nothing here, so this is exactly
+    // what trips an empty-body check that only counts text. Up to 2.4.0 the
+    // package dropped the image anyway and the refusal was accidentally right.
     $entry = makeTemplate(['body' => '<p><img src="https://example.com/flyer.png" alt="Flyer"></p>']);
 
-    $result = runAction([$entry]);
+    runAction([$entry]);
 
-    expect(sentEmails())->toBeEmpty()
-        ->and($result)->toBe(['message' => false]);
+    expect(sentEmails())->toHaveCount(1)
+        ->and(sentEmails()[0]->getHtmlBody())
+        ->toContain('https://example.com/flyer.png')
+        ->toContain('Flyer');
+});
+
+it('makes a relative image source absolute on its way into the mail', function () {
+    // `forceRootUrl`, not `config('app.url')`: the UrlGenerator reads app.url
+    // once, when it is first resolved, and by this point it already has. The
+    // scheme is a separate setting and does not come along with the root.
+    URL::forceScheme('https');
+    URL::forceRootUrl('https://nordlicht.example');
+
+    // What an author picks in Bard: a Statamic asset, stored as a site-relative
+    // path. It resolves in the CP preview because a browser has the site as its
+    // base, and resolves to nothing in an inbox.
+    $entry = makeTemplate(['body' => '<p>Hallo <img src="/assets/flyer.png" alt="Flyer"></p>']);
+
+    runAction([$entry]);
+
+    expect(sentEmails()[0]->getHtmlBody())
+        ->toContain('https://nordlicht.example/assets/flyer.png')
+        ->not->toContain('src="/assets/flyer.png"');
 });
 
 it('reports a refusing mailer in red instead of a green sent', function () {

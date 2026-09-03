@@ -219,14 +219,12 @@ class SendTestEmail extends Action
         // arrives looking like a mailer problem instead. Say which it is, here,
         // where the author can still fix it.
         //
-        // Text-only on purpose. An image-only body would be a real thing
-        // elsewhere — a flyer, a header graphic — but not in this addon as it
-        // stands: HtmlToBard drops `<img>` on import (despite its docblock
-        // saying otherwise) and BardHtmlRenderer emits nothing for a
-        // ProseMirror `image` node, both verified 2026-09-03. So a picture
-        // never reaches this line, and an `<img>` escape hatch here would be
-        // dead code implying a capability the package does not have.
-        if (trim(strip_tags($html)) === '') {
+        // A picture counts as content. `strip_tags` throws an `<img>` away along
+        // with everything else, so a flyer or a header graphic with no words
+        // around it would read as empty to the test below. In 2.4.0 that was
+        // accidentally harmless — the package dropped images on both the import
+        // and the render path — and since 2.5.0 it would be plain wrong.
+        if (trim(strip_tags($html)) === '' && stripos($html, '<img') === false) {
             throw new RuntimeException(
                 (string) __('email-templates::email_templates.test_send_empty_body')
             );

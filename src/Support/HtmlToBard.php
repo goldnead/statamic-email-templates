@@ -3,9 +3,6 @@
 namespace Goldnead\EmailTemplates\Support;
 
 use Tiptap\Editor;
-use Tiptap\Extensions\StarterKit;
-use Tiptap\Marks\Link;
-use Tiptap\Marks\Underline;
 
 /**
  * Converts legacy HTML into the Bard value (a ProseMirror node list) so the
@@ -15,10 +12,15 @@ use Tiptap\Marks\Underline;
  * templates authored directly in the CP are already Bard nodes and never pass
  * through here.
  *
- * Fidelity note: tiptap's default schema keeps structural markup (headings,
- * lists, links, images, tables) but drops inline styles / unknown attributes.
- * Simple transactional templates round-trip cleanly; heavily styled marketing
- * HTML may lose styling and is a documented follow-up (see README).
+ * Fidelity note: the schema in {@see TiptapExtensions} keeps headings, lists,
+ * links and images, but drops inline styles and unknown attributes. Simple
+ * transactional templates round-trip cleanly; heavily styled marketing HTML may
+ * lose styling and is a documented follow-up (see README).
+ *
+ * **Tables are not kept.** Until 2.5.0 this note claimed they were, and claimed
+ * the same of images — which is why the missing `image` node went unnoticed for
+ * so long: reading the code could not reveal it, only sending a mail with a
+ * picture in it could. Images are kept now. Tables really are still dropped.
  */
 class HtmlToBard
 {
@@ -36,11 +38,7 @@ class HtmlToBard
         try {
             if (class_exists(Editor::class)) {
                 $doc = (new Editor([
-                    'extensions' => [
-                        new StarterKit,
-                        new Link,
-                        new Underline,
-                    ],
+                    'extensions' => TiptapExtensions::all(),
                 ]))->setContent($html)->getDocument();
 
                 if (is_array($doc) && isset($doc['content']) && is_array($doc['content'])) {

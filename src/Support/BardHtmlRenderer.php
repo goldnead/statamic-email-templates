@@ -5,9 +5,6 @@ namespace Goldnead\EmailTemplates\Support;
 use Statamic\Fields\Value;
 use Statamic\Fieldtypes\Bard\Augmentor;
 use Tiptap\Editor;
-use Tiptap\Extensions\StarterKit;
-use Tiptap\Marks\Link;
-use Tiptap\Marks\Underline;
 
 /**
  * Renders a Bard body value into email-ready HTML.
@@ -38,7 +35,7 @@ class BardHtmlRenderer
         }
 
         if (is_string($value)) {
-            return trim($value);
+            return $this->prepareImages(trim($value));
         }
 
         if (! is_array($value) || $value === []) {
@@ -53,13 +50,9 @@ class BardHtmlRenderer
                     ? $value
                     : ['type' => 'doc', 'content' => $value];
 
-                return (string) (new Editor([
-                    'extensions' => [
-                        new StarterKit,
-                        new Link,
-                        new Underline,
-                    ],
-                ]))->setContent($doc)->getHTML();
+                return $this->prepareImages((string) (new Editor([
+                    'extensions' => TiptapExtensions::all(),
+                ]))->setContent($doc)->getHTML());
             }
         } catch (\Throwable $e) {
             // fall through to the Statamic augmentor
@@ -69,12 +62,50 @@ class BardHtmlRenderer
         try {
             $augmentor = Augmentor::class;
             if (class_exists($augmentor) && method_exists($augmentor, 'convertToHtml')) {
-                return (string) $augmentor::convertToHtml($value);
+                return $this->prepareImages((string) $augmentor::convertToHtml($value));
             }
         } catch (\Throwable $e) {
             // fall through
         }
 
         return '';
+    }
+
+    /**
+     * Make every `<img src>` absolute.
+     *
+     * A picture is the one piece of an email body that is not delivered with
+     * it: the client fetches it later, from a machine that knows nothing about
+     * the site that sent the mail. `/assets/flyer.png` resolves against the
+     * site in a browser and against nothing at all in an inbox, so a Statamic
+     * asset — which is exactly what an author picks in Bard — arrives as a
+     * broken image. Silently: no client reports the reason, and the CP preview
+     * looks right, because a browser *does* have the site as its base.
+     *
+     * Applied to every path out of `render()`, the raw-HTML one included: an
+     * imported legacy template carries the same relative paths.
+     *
+     * Left alone: anything already absolute, protocol-relative, `data:` or
+     * `cid:`. Rewriting those would break embedded and attached images.
+     */
+    protected function prepareImages(string $html): string
+    {
+        if ($html === '' || stripos($html, '<img') === false) {
+            return $html;
+        }
+
+        return (string) preg_replace_callback(
+            '/(<img\b[^>]*?\bsrc\s*=\s*)(["\'])(.*?)\2/i',
+            function (array $m): string {
+                $src = trim($m[3]);
+
+                $alreadyUsable = $src === ''
+                    || preg_match('~^[a-z][a-z0-9+.-]*:~i', $src) === 1
+                    || str_starts_with($src, '//');
+
+                return $alreadyUsable ? $m[0] : $m[1].$m[2].url($src).$m[2];
+            },
+            $html
+        );
     }
 }

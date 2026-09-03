@@ -1,5 +1,44 @@
 # Changelog
 
+## 2.5.0 — 2026-09-03
+
+### Bilder in E-Mail-Vorlagen funktionieren
+
+Ein `<img>` im Text einer Vorlage kam beim Empfänger nicht an. Es ging an zwei
+Stellen unabhängig voneinander verloren: `HtmlToBard` parste HTML mit einem
+tiptap-Schema ohne `image`-Node, also wurde ein Bild beim Import nie zu einem
+Knoten, und `BardHtmlRenderer` rendert einen `image`-Knoten, den er trotzdem
+bekam, als Leerstring. Keine der beiden Stellen meldete etwas. Der Docblock von
+`HtmlToBard` führte „images" ausdrücklich als erhalten auf, weshalb es beim
+Lesen des Codes nicht zu finden war.
+
+Beide Richtungen teilen sich jetzt eine Erweiterungsliste, `TiptapExtensions`.
+Ein Knoten, der dort dazukommt, gilt für Import und Ausgabe zugleich — sie
+können nicht wieder auseinanderlaufen.
+
+Dazu zwei Dinge, ohne die ein Bild in einer Mail nur halb funktioniert:
+
+- **Relative Bildpfade werden absolut.** Ein Statamic-Asset steht als
+  `/assets/flyer.png` im Feld. Das löst im Browser gegen die Website auf und im
+  Postfach gegen nichts — der Empfänger sieht ein kaputtes Bild, ohne dass
+  irgendwo ein Fehler steht. Gilt auch für den Rohtext-Pfad, über den importierte
+  Alt-Vorlagen laufen. Absolute, protokollrelative, `data:`- und `cid:`-Quellen
+  bleiben unangetastet.
+- **Jedes Bild bekommt `max-width:100%;height:auto;border:0;`** als Inline-Style.
+  Ohne `max-width` erzwingt eine 1200px-Kopfgrafik in einem Handy-Client
+  Querscrollen. `border` steht im Style und nicht als `border="0"`, weil
+  tiptap-php ein Attribut mit dem Wert `0` gar nicht ausgeben kann:
+  `HTML::renderAttributes()` schickt das Attribut-Array durch `array_filter()`
+  ohne Callback, und `'0'` ist in PHP falsy.
+
+Die Leer-Body-Absage des Testversands zählt ein Bild jetzt als Inhalt. In 2.4.0
+war sie zufällig richtig, weil ohnehin nichts ankam.
+
+**Tabellen bleiben draußen.** Derselbe Docblock behauptete sie auch, und auch
+das stimmte nicht. Eine Tabelle ist aber kein einzelner Knoten, sondern vier,
+und eine E-Mail-Tabelle will `cellpadding`, `cellspacing` und
+`role="presentation"`, die tiptap nicht ausgibt. Der Docblock sagt das jetzt.
+
 ## 2.4.0 — 2026-09-03
 
 ### Send a template to a real inbox
@@ -44,6 +83,8 @@ An image-only body cannot be sent, and the empty-body refusal is what you get.
 and `BardHtmlRenderer` renders a ProseMirror `image` node as the empty string.
 Pre-existing, not introduced here, and now covered by a test that fails when it
 is fixed.
+
+> Behoben in 2.5.0, am selben Tag.
 
 ## 2.3.0 — 2026-09-02
 
