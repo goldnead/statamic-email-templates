@@ -5,6 +5,7 @@ namespace Goldnead\EmailTemplates\Http\Controllers;
 use Facades\Statamic\CP\LivePreview;
 use Goldnead\EmailTemplates\Support\BardHtmlRenderer;
 use Goldnead\EmailTemplates\Support\BrandedBodyRenderer;
+use Goldnead\EmailTemplates\Support\Brands;
 use Goldnead\EmailTemplates\Support\EmailPreheader;
 use Goldnead\EmailTemplates\Support\MergeVariables;
 use Illuminate\Http\Request;
@@ -46,6 +47,35 @@ class LivePreviewController extends Controller
             );
         }
 
+        // Everything below runs as the template's OWN brand, not the editor's.
+        // Without this the preview borrows whatever brand the request resolved
+        // to: a Chorwerkstatt template opened by a Nordlicht user rendered with
+        // Nordlicht's sender name and, where the host app's shell reads the
+        // brand, in Nordlicht's colour — a convincing preview of the wrong
+        // mail. Found on the demo, 03.09.2026. An unbranded template or a
+        // single-brand install renders exactly as before.
+        return Brands::runFor($this->brandOf($entry), fn () => $this->render($entry));
+    }
+
+    /** The handle of the brand this template belongs to, or null. */
+    protected function brandOf(mixed $entry): ?string
+    {
+        $brand = $entry->value(Brands::FIELD);
+
+        // The brand field is a `tags` fieldtype, so it arrives as an array even
+        // though exactly one brand is ever selected.
+        if (is_array($brand)) {
+            $brand = $brand[0] ?? null;
+        }
+
+        $brand = is_string($brand) ? trim($brand) : null;
+
+        return $brand === '' ? null : $brand;
+    }
+
+    /** The render itself, split out so it can run inside a brand. */
+    protected function render(mixed $entry): Response
+    {
         $sample = MergeVariables::sampleData();
 
         // Only the body is HTML. The subject is escaped once on its way into

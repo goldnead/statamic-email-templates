@@ -169,3 +169,104 @@ it('renders the branded shell in the live preview when configured', function () 
         // The lean generic-preview document is bypassed when branding is on.
         ->not->toContain('class="et-body"');
 });
+
+/** A stand-in brand-context that can switch and remembers where it was. */
+function fakeSwitchingBrandContext(string $current): void
+{
+    app()->instance('brand-context', new class($current)
+    {
+        public function __construct(private string $current) {}
+
+        public function multiBrandEnabled(): bool
+        {
+            return true;
+        }
+
+        public function hasCurrent(): bool
+        {
+            return true;
+        }
+
+        public function current(): object
+        {
+            return (object) ['handle' => $this->current, 'name' => $this->current];
+        }
+
+        public function default(): object
+        {
+            return (object) ['handle' => $this->current, 'name' => $this->current];
+        }
+
+        public function runFor(string $brand, Closure $callback): mixed
+        {
+            $previous = $this->current;
+            $this->current = $brand;
+
+            try {
+                return $callback();
+            } finally {
+                $this->current = $previous;
+            }
+        }
+    });
+}
+
+/**
+ * The regression the brand switch exists for.
+ *
+ * Before the fix the preview rendered under the brand the REQUEST resolved to,
+ * which in the Control Panel is the logged-in editor's. Opening a Chorwerkstatt
+ * template as a Nordlicht user therefore wrapped Chorwerkstatt's words in
+ * Nordlicht's shell, with nothing on screen saying so — the demo showed exactly
+ * that on 03.09.2026.
+ *
+ * The shell fixture prints the handle it rendered under, so this names the
+ * brand instead of inferring it from a colour. Against the old controller it
+ * reports `nordlicht` and fails.
+ */
+it('previews a template under its own brand, not the editor\'s', function () {
+    config()->set('email-templates.branded_layout', 'testbrand::brandaware');
+
+    fakeSwitchingBrandContext('nordlicht');
+
+    [$entry] = app(EmailTemplateCollectionManager::class)->upsert(new EmailTemplateData(
+        slug: 'cw-willkommen',
+        title: 'Willkommen in der Chorwerkstatt',
+        subject: 'Hallo {{ contact.first_name }}',
+        body: '<p>Schön dass du da bist.</p>',
+    ));
+
+    // The manager stamps the current brand; this template belongs to the other.
+    $entry->set('brand', ['chorwerkstatt'])->saveQuietly();
+
+    LivePreview::tokenize('lp-brand-token', $entry);
+
+    $response = $this->get('/'.EmailTemplateCollectionManager::LIVE_PREVIEW_ROUTE.'?token=lp-brand-token');
+
+    $response->assertOk();
+
+    expect($response->getContent())
+        ->toContain('BRAND HEADER: chorwerkstatt')
+        ->not->toContain('BRAND HEADER: nordlicht');
+});
+
+it('leaves the editor\'s brand where it was afterwards', function () {
+    config()->set('email-templates.branded_layout', 'testbrand::brandaware');
+
+    fakeSwitchingBrandContext('nordlicht');
+
+    [$entry] = app(EmailTemplateCollectionManager::class)->upsert(new EmailTemplateData(
+        slug: 'cw-willkommen',
+        title: 'Willkommen',
+        subject: 'Hallo',
+        body: '<p>Text.</p>',
+    ));
+
+    $entry->set('brand', ['chorwerkstatt'])->saveQuietly();
+
+    LivePreview::tokenize('lp-restore-token', $entry);
+
+    $this->get('/'.EmailTemplateCollectionManager::LIVE_PREVIEW_ROUTE.'?token=lp-restore-token')->assertOk();
+
+    expect(app('brand-context')->current()->handle)->toBe('nordlicht');
+});

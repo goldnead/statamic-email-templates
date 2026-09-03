@@ -1,6 +1,7 @@
 <?php
 
 use Goldnead\EmailTemplates\Entries\EmailTemplateEntry;
+use Goldnead\EmailTemplates\Http\Controllers\LivePreviewController;
 use Goldnead\EmailTemplates\Services\EmailTemplateCollectionManager;
 use Goldnead\EmailTemplates\Support\Brands;
 use Goldnead\EmailTemplates\Support\EmailTemplateBlueprint;
@@ -330,4 +331,169 @@ it('keeps the entry class saving when the brand cannot be resolved', function ()
 
     expect($entry)->toBeInstanceOf(EmailTemplateEntry::class);
     expect($entry->get(Brands::FIELD))->toBeNull();
+});
+
+// -- Rendering under the template's own brand ------------------------------
+//
+// A preview renders in whatever brand the REQUEST resolved to unless somebody
+// says otherwise. On the demo that was the logged-in editor's brand, so a
+// Chorwerkstatt template appeared with Nordlicht's sender name and colour: a
+// convincing preview of the wrong mail, with nothing on screen saying so.
+//
+// `runFor` is the fix, and its fall-throughs matter more than the happy path —
+// three of the four ways it can decline are ordinary installs.
+
+/** A stand-in new enough to switch brands, i.e. one that has runFor. */
+function fakeBrandContextThatSwitches(?string $current): object
+{
+    $fake = new class($current)
+    {
+        public array $ranAs = [];
+
+        public function __construct(private ?string $current) {}
+
+        public function multiBrandEnabled(): bool
+        {
+            return true;
+        }
+
+        public function hasCurrent(): bool
+        {
+            return $this->current !== null;
+        }
+
+        public function current(): object
+        {
+            return (object) ['handle' => $this->current, 'name' => $this->current];
+        }
+
+        public function default(): object
+        {
+            return (object) ['handle' => 'default', 'name' => 'default'];
+        }
+
+        public function runFor(string $brand, Closure $callback): mixed
+        {
+            $this->ranAs[] = $brand;
+            $previous = $this->current;
+            $this->current = $brand;
+
+            try {
+                return $callback();
+            } finally {
+                $this->current = $previous;
+            }
+        }
+    };
+
+    app()->instance('brand-context', $fake);
+
+    return $fake;
+}
+
+it('runs the callback as the named brand', function () {
+    $fake = fakeBrandContextThatSwitches('nordlicht');
+
+    $seen = Brands::runFor('chorwerkstatt', fn () => Brands::current());
+
+    expect($seen)->toBe('chorwerkstatt');
+    expect($fake->ranAs)->toBe(['chorwerkstatt']);
+});
+
+it('puts the previous brand back afterwards', function () {
+    fakeBrandContextThatSwitches('nordlicht');
+
+    Brands::runFor('chorwerkstatt', fn () => null);
+
+    expect(Brands::current())->toBe('nordlicht');
+});
+
+it('hands back what the callback returns', function () {
+    fakeBrandContextThatSwitches('nordlicht');
+
+    expect(Brands::runFor('chorwerkstatt', fn () => 'gerendert'))->toBe('gerendert');
+});
+
+it('runs plainly for a template that names no brand', function () {
+    $fake = fakeBrandContextThatSwitches('nordlicht');
+
+    $seen = Brands::runFor(null, fn () => Brands::current());
+
+    expect($seen)->toBe('nordlicht');
+    expect($fake->ranAs)->toBe([]);
+});
+
+it('runs plainly on an install without the brand package', function () {
+    // No binding at all: the default install, and it must not throw.
+    expect(Brands::runFor('chorwerkstatt', fn () => 'ok'))->toBe('ok');
+});
+
+it('runs plainly against a brand-context too old to have runFor', function () {
+    // The original fake has no runFor — exactly an older brand-context. The
+    // render still has to happen, just without the switch.
+    fakeBrandContext('nordlicht');
+
+    $seen = Brands::runFor('chorwerkstatt', fn () => Brands::current());
+
+    expect($seen)->toBe('nordlicht');
+});
+
+it('still renders when switching the brand throws', function () {
+    app()->instance('brand-context', new class
+    {
+        public function multiBrandEnabled(): bool
+        {
+            return true;
+        }
+
+        public function runFor(string $brand, Closure $callback): mixed
+        {
+            // An unknown or deleted handle. Not a reason to lose the mail.
+            throw new RuntimeException('no such brand');
+        }
+    });
+
+    expect(Brands::runFor('geloescht', fn () => 'ok'))->toBe('ok');
+});
+
+it('reads the brand off a template whichever shape the field has', function () {
+    $controller = new class extends LivePreviewController
+    {
+        public function __construct() {}
+
+        public function read(mixed $entry): ?string
+        {
+            return $this->brandOf($entry);
+        }
+    };
+
+    // The blueprint field is a `tags` fieldtype, so a saved entry hands back an
+    // array even though exactly one brand is ever chosen.
+    $arrayed = new class
+    {
+        public function value(string $key): mixed
+        {
+            return ['chorwerkstatt'];
+        }
+    };
+
+    $plain = new class
+    {
+        public function value(string $key): mixed
+        {
+            return 'nordlicht';
+        }
+    };
+
+    $blank = new class
+    {
+        public function value(string $key): mixed
+        {
+            return ['  '];
+        }
+    };
+
+    expect($controller->read($arrayed))->toBe('chorwerkstatt');
+    expect($controller->read($plain))->toBe('nordlicht');
+    expect($controller->read($blank))->toBeNull();
 });

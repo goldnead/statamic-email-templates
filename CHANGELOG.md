@@ -1,5 +1,31 @@
 # Changelog
 
+## 2.6.1 — 2026-09-03
+
+### Behoben: die Live-Vorschau rendert unter der Marke der Vorlage
+
+Betrifft nur Installationen mit `goldnead/statamic-brand-context` und mehreren
+Marken.
+
+Die Vorschau lief unter der Marke, die der **Request** aufgelöst hat, und das ist
+im Control Panel die Marke der angemeldeten Person. Wer eine Vorlage der Marke B
+als Nutzer der Marke A öffnete, sah deren Wortlaut in der Identität von A: der
+Absendername aus `{{ sender.name }}` gehörte A, und wo die Hülle der Host-App die
+Marke liest, auch deren Farbe. Eine überzeugende Vorschau der falschen Mail, und
+nichts auf dem Schirm sagte es.
+
+Der Render läuft jetzt in `Brands::runFor()` unter der Marke des Eintrags. Der
+Markenkontext des Betrachters steht danach wieder wie vorher.
+
+Vier Wege fallen bewusst auf das bisherige Verhalten zurück: eine Vorlage ohne
+Marke, eine Installation ohne brand-context, ein brand-context ohne `runFor`, und
+ein Handle, den es nicht mehr gibt. Der letzte Fall rendert die Mail ohne
+Markenwechsel, statt die Vorschau scheitern zu lassen.
+
+Gefunden auf `demo.adriangoldner.dev`. Der Regressionstest nennt die Marke, unter
+der gerendert wurde, statt sie aus einer Farbe zu schließen, und ist gegen den
+alten Code rot.
+
 ## 2.6.0 — 2026-09-03
 
 > **Wer 2.5.0 installiert hat, hebt direkt auf diese Fassung.** 2.5.0 macht eine

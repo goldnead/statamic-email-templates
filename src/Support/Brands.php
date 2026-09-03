@@ -132,6 +132,38 @@ class Brands
         }
     }
 
+    /**
+     * Run a callback as a given brand, and hand back whatever it returns.
+     *
+     * Without this, anything that renders a template runs as whatever brand the
+     * *request* resolved to, not the one the template belongs to. On a preview
+     * that is the logged-in editor's brand: opening a Chorwerkstatt template as
+     * a Nordlicht user rendered it with Nordlicht's sender name, and once the
+     * host app's mail shell started reading the brand, in Nordlicht's colour
+     * too. It looked like a working preview of the wrong mail, which is the
+     * expensive kind of wrong. Found on the demo, 03.09.2026.
+     *
+     * Falls through to a plain call when the handle is null (an unbranded
+     * template, or a single-brand install) or when brand-context is absent —
+     * that is the default install, and it must behave exactly as before.
+     */
+    public static function runFor(?string $handle, \Closure $callback): mixed
+    {
+        $manager = static::manager();
+
+        if ($handle === null || $handle === '' || $manager === null || ! method_exists($manager, 'runFor')) {
+            return $callback();
+        }
+
+        try {
+            return $manager->runFor($handle, $callback);
+        } catch (\Throwable) {
+            // An unknown or deleted handle is no reason to fail the render: the
+            // caller still wants its mail, just without the brand swap.
+            return $callback();
+        }
+    }
+
     /** The brand-context manager, or null when the package is not installed. */
     protected static function manager(): ?object
     {
