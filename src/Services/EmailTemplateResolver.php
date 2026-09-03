@@ -7,6 +7,7 @@ use Goldnead\EmailTemplates\Support\BrandedBodyRenderer;
 use Goldnead\EmailTemplates\Support\EmailPreheader;
 use Goldnead\EmailTemplates\Support\EmailTemplateData;
 use Statamic\Contracts\Entries\Entry as EntryContract;
+use Statamic\Entries\Entry;
 
 /**
  * Resolves an email template by slug. A managed `email_templates` entry always
@@ -37,10 +38,45 @@ class EmailTemplateResolver
     {
         $data = $this->lookup($slug, $fallback);
 
-        if ($data === null) {
-            return null;
-        }
+        return $data === null ? null : $this->decorate($data);
+    }
 
+    /**
+     * The same template data, for an entry the caller already holds.
+     *
+     * {@see resolve()} goes looking for an entry by slug, which is right when a
+     * slug is all a sending addon has. The Control Panel is the other case: an
+     * action is handed the very entry the author has open, and looking its slug
+     * up again would run through the brand scope in
+     * {@see EmailTemplateCollectionManager::findBySlug()} and could come back
+     * with a *different* brand's template under the same slug — which is the
+     * documented arrangement here, not an edge case. So the test send renders
+     * the entry it was given.
+     *
+     * It still ends in {@see decorate()}, so preheader and layout are applied by
+     * the one routine a real send uses. Only the lookup differs.
+     *
+     * Typed against the concrete `Statamic\Entries\Entry`, not the contract:
+     * `Statamic\Contracts\Entries\Entry` is an empty marker interface, so
+     * `slug()` — which lives in the `Routable` trait — is not on it. The rest of
+     * this class takes the contract because it never needs more than `value()`.
+     * Every entry this can be handed is a concrete one anyway; the collection's
+     * `entry_class` is EmailTemplateEntry, which extends it.
+     */
+    public function forEntry(Entry $entry): EmailTemplateData
+    {
+        return $this->decorate($this->fromEntry((string) $entry->slug(), $entry));
+    }
+
+    /**
+     * Turn raw template data into what a recipient actually receives.
+     *
+     * Everything true of every send lives here, so `resolve()` and `forEntry()`
+     * cannot drift apart — the CP test send and the automations send node
+     * produce identical HTML from the same entry.
+     */
+    protected function decorate(EmailTemplateData $data): EmailTemplateData
+    {
         // Inject the hidden preheader (preview text) at the very top of the
         // body. Its merge-variable tokens ride inside the body from here on, so
         // the consuming addon's body substitution pass resolves them exactly

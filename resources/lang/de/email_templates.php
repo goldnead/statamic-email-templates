@@ -22,4 +22,15 @@ return [
     'field_description_instructions' => 'Interne Notiz. Wird nicht an Empfänger gesendet.',
     'live_preview_target' => 'E-Mail',
     'live_preview_empty' => 'Keine Live-Vorschau verfügbar. Öffne die Vorschau aus der Bearbeitung einer Vorlage.',
+
+    'test_send' => 'Testmail senden',
+    'test_send_button' => 'Senden|:count Vorlagen senden',
+    'test_send_confirm' => 'Sendet die gespeicherte Vorlage an ein echtes Postfach, mit den Beispieldaten aus der Vorschau.',
+    'test_send_dirty' => 'Ungespeicherte Änderungen sind nicht dabei. Der Test sendet den zuletzt gespeicherten Stand dieser Vorlage — erst speichern, wenn du sehen willst, was du gerade getippt hast.',
+    'test_send_recipient' => 'Senden an',
+    'test_send_recipient_instructions' => 'Deine eigene Adresse, damit du die Mail in einem echten Programm ansehen kannst. Merge-Variablen werden mit den dokumentierten Beispieldaten gefüllt.',
+    'test_send_ok' => 'Testmail an :recipient gesendet.|:count Testmails an :recipient gesendet.',
+    'test_send_failed' => '„:template“ konnte nicht gesendet werden: :reason|:failed von :total Testmails konnten nicht gesendet werden. „:template“: :reason',
+    'test_send_empty_body' => 'Die Vorlage hat keinen Inhalt. In der Testmail wäre nichts zu sehen.',
+    'test_send_no_subject' => '(kein Betreff gesetzt)',
 ];

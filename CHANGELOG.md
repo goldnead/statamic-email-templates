@@ -1,5 +1,50 @@
 # Changelog
 
+## 2.4.0 — 2026-09-03
+
+### Send a template to a real inbox
+
+New Control Panel action **Send test email**, in the row menu of the listing and
+in the publish form's action menu. It asks for an address (prefilled with the
+logged-in user's) and sends the saved template there.
+
+Until now the only way to see a template in an actual mail client was to trigger
+the real thing — make a purchase, fire an automation. Live Preview shows the mail
+in a browser, and a browser is not a mail client: Outlook lays out with Word,
+Gmail drops the `<style>` block. The split-screen could never answer whether a
+template survives the trip.
+
+The test takes the real send path. `EmailTemplateResolver` gained `forEntry()`,
+which shares its new `decorate()` step with `resolve()`, so preheader injection
+and layout wrapping happen in one place for both the test and the automations
+send node. Merge variables are filled from `preview.sample_data`, the same set
+the Live Preview uses. The From is the address the preview shows.
+
+- Not queued. A queued test would report success from the moment the job was
+  written, and never arrive on a host without a worker.
+- A refusing mailer produces a **red** toast naming the reason, not a green
+  "sent". An exception out of an action's `run()` is toasted green by core, so
+  the failure travels as a server-pushed toast with `message: false` beside it.
+- A template with an empty body is refused with a message saying so, rather than
+  sending a blank mail that looks like a mailer fault.
+- Permitted by `edit et_templates entries`. No new permission — a new one would
+  be off for every existing role, hiding the button from the people who write the
+  templates.
+
+New config key `test_send.subject_prefix` (default `'[Test] '`); set it to an
+empty string to send the subject exactly as a recipient sees it.
+
+`MergeVariables::previewSender()` is now public, so the test send can use the
+same From the preview promises.
+
+### Known gap
+
+An image-only body cannot be sent, and the empty-body refusal is what you get.
+`HtmlToBard` drops `<img>` on import despite its docblock saying it keeps images,
+and `BardHtmlRenderer` renders a ProseMirror `image` node as the empty string.
+Pre-existing, not introduced here, and now covered by a test that fails when it
+is fixed.
+
 ## 2.3.0 — 2026-09-02
 
 > **Wer `goldnead/statamic-funnels` einsetzt, hebt es zusammen mit dieser Fassung auf 1.9.1.**

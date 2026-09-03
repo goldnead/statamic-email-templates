@@ -22,4 +22,15 @@ return [
     'field_description_instructions' => 'Internal note. Not sent to recipients.',
     'live_preview_target' => 'Email',
     'live_preview_empty' => 'No live preview available. Open the preview while editing a template.',
+
+    'test_send' => 'Send test email',
+    'test_send_button' => 'Send|Send :count templates',
+    'test_send_confirm' => 'This sends the saved template to a real inbox, with the sample merge data the preview uses.',
+    'test_send_dirty' => 'Unsaved changes are not included. The test sends the last saved version of this template — save first if you want to see what you just typed.',
+    'test_send_recipient' => 'Send to',
+    'test_send_recipient_instructions' => 'Your own address, so you can look at the mail in a real client. Merge variables are filled with the documented sample data.',
+    'test_send_ok' => 'Test email sent to :recipient.|:count test emails sent to :recipient.',
+    'test_send_failed' => 'Could not send “:template”: :reason|:failed of :total test emails could not be sent. “:template”: :reason',
+    'test_send_empty_body' => 'The template has no body. There would be nothing to look at in the test email.',
+    'test_send_no_subject' => '(no subject set)',
 ];

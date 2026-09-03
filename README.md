@@ -194,6 +194,37 @@ button without giving templates a public URL. The split-screen iframe is served 
 `GET /email-templates/live-preview`, which only renders a body for a valid,
 short-lived Live Preview token and shows a neutral placeholder otherwise.
 
+### Test send
+
+Live Preview renders the mail in a browser, and a mail client is not a browser:
+Outlook lays out with Word, Gmail drops the `<style>` block, a dark-mode client
+repaints colours nobody chose. So the split-screen answers *did I write what I
+meant* and cannot answer *does it survive the trip*.
+
+**Send test email** does. It sits in the row menu of the listing and in the
+action menu of the publish form, asks for an address (prefilled with your own),
+and sends the template to it.
+
+What arrives is what a recipient would get. The action renders through
+`EmailTemplateResolver::forEntry()`, which shares its one `decorate()` step with
+the `resolve()` a sending addon calls — same preheader injection, same layout
+wrapping, same `MergeVariables::apply()`. Merge variables are filled with the
+documented sample data from `preview.sample_data`, so `{{ contact.first_name }}`
+arrives as *Maria*, not as a raw tag. The From is the address the Live Preview
+shows.
+
+Three things worth knowing:
+
+- **It sends the saved entry**, not your unsaved edits. Save first.
+- **It is not queued.** A queued test would report success the moment the job was
+  written, and on a host with no worker it would never arrive.
+- **A failure is red.** A mailer that refuses — wrong credentials, a throttled
+  relay, a From the provider rejects — produces an error toast naming the reason,
+  never a green "sent" over a mail that never left.
+
+Whoever may edit a template may test it (`edit et_templates entries`); the addon
+adds no permission of its own.
+
 ## Configuration
 
 `config/email-templates.php`:
@@ -205,6 +236,7 @@ short-lived Live Preview token and shows a neutral placeholder otherwise.
 | `layouts` | `[]` | A `handle => view` map. The keys populate the `layout` select on each entry, so a transactional mail can pick a lean shell and a campaign a marketing one. |
 | `default_layout` | `null` | A handle from `layouts`, used for entries that pick none. |
 | `preview.sample_data` | see above | Deep-merged over the built-in merge-variable sample set. |
+| `test_send.subject_prefix` | `'[Test] '` | Put in front of the subject of a test send, so a test is recognisable in an inbox that also holds real mail. Empty string sends the subject exactly as a recipient would see it. |
 
 Layout resolution for an entry: its own `layout`, else `default_layout`, else
 `branded_layout`. An unknown handle or a missing view falls through the chain —

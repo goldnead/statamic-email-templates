@@ -183,7 +183,13 @@ class MergeVariables
     }
 
     /**
-     * The sender the preview shows.
+     * The sender the preview shows — and the From of a CP test send, so the
+     * address in the test mail is the address the split-screen promised.
+     *
+     * Public for that second caller. It stays the *preview* sender, not the send
+     * path's: statamic-automations resolves a real send's From through
+     * brand-context's full SenderIdentity apparatus, and this package keeps
+     * brand-context optional.
      *
      * Until 2026-08-24 this read `config('mail.from.*')` unconditionally, so on
      * a multi-brand host every brand's template previewed with the same — and
@@ -198,7 +204,7 @@ class MergeVariables
      *
      * @return array<string, string>
      */
-    protected static function previewSender(): array
+    public static function previewSender(): array
     {
         $fallback = [
             'name' => config('mail.from.name') ?: config('app.name') ?: 'Sender',

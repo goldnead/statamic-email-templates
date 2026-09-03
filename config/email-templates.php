@@ -107,6 +107,23 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Test send
+    |--------------------------------------------------------------------------
+    |
+    | The Control Panel's "Send test email" action puts this in front of the
+    | rendered subject, so a test mail is recognisable in an inbox that also
+    | holds real ones. Set it to an empty string to send the subject exactly as
+    | a recipient would see it — worth doing once per template, since the prefix
+    | eats into the ~40 characters a phone shows.
+    |
+    */
+
+    'test_send' => [
+        'subject_prefix' => '[Test] ',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Countdown
     |--------------------------------------------------------------------------
     |

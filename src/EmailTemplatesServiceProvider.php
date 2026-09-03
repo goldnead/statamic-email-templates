@@ -2,6 +2,7 @@
 
 namespace Goldnead\EmailTemplates;
 
+use Goldnead\EmailTemplates\Actions\SendTestEmail;
 use Goldnead\EmailTemplates\Console\AssignBrandCommand;
 use Goldnead\EmailTemplates\Console\ImportEmailTemplatesCommand;
 use Goldnead\EmailTemplates\Entries\EmailTemplateEntry;
@@ -33,6 +34,15 @@ class EmailTemplatesServiceProvider extends AddonServiceProvider
     protected $commands = [
         ImportEmailTemplatesCommand::class,
         AssignBrandCommand::class,
+    ];
+
+    /**
+     * Core would find this by autoloading `src/Actions` anyway, so the entry is
+     * belt-and-braces — but it is also the only place a reader of this file
+     * learns that the addon puts anything in the Control Panel's action menu.
+     */
+    protected $actions = [
+        SendTestEmail::class,
     ];
 
     /**
