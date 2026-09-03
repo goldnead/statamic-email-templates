@@ -88,6 +88,63 @@ it('leaves an absolute, protocol-relative, data or cid image source alone', func
         ->toContain('src="data:image/gif;base64,R0lGOD"');
 });
 
+/**
+ * Links, same treatment as images (2.6.0), and the merge-tag rule both obey.
+ */
+it('makes a relative link absolute', function () {
+    URL::forceScheme('https');
+    URL::forceRootUrl('https://nordlicht.example');
+
+    expect((new BardHtmlRenderer)->render('<p><a href="/kurs">Zum Kurs</a></p>'))
+        ->toContain('href="https://nordlicht.example/kurs"');
+});
+
+it('leaves mailto, tel, absolute and fragment links alone', function () {
+    URL::forceScheme('https');
+    URL::forceRootUrl('https://nordlicht.example');
+
+    $renderer = new BardHtmlRenderer;
+
+    // A footer's mailto: rewritten to https://site/mailto:… is a dead link in
+    // every client, and `href="#"` is a deliberate non-link.
+    expect($renderer->render('<a href="mailto:hallo@example.com">Mail</a>'))
+        ->toContain('href="mailto:hallo@example.com"')
+        ->and($renderer->render('<a href="tel:+4930123">Anrufen</a>'))
+        ->toContain('href="tel:+4930123"')
+        ->and($renderer->render('<a href="https://example.com/x">Extern</a>'))
+        ->toContain('href="https://example.com/x"')
+        ->and($renderer->render('<a href="#">Nichts</a>'))
+        ->toContain('href="#"');
+});
+
+/**
+ * The regression 2.5.0 shipped.
+ *
+ * This runs BEFORE MergeVariables, so an address still holds its `{{ tag }}`
+ * here. `url()` percent-encodes the braces into `%7B%7B`, the substitution
+ * afterwards no longer matches, and the reader gets a link to a page named
+ * after the variable. An unsubscribe link has exactly this shape, so it is the
+ * normal case rather than an exotic one.
+ */
+it('never touches an address that still carries a merge tag', function () {
+    URL::forceScheme('https');
+    URL::forceRootUrl('https://nordlicht.example');
+
+    $renderer = new BardHtmlRenderer;
+
+    expect($renderer->render('<a href="{{ unsubscribe_url }}">Abmelden</a>'))
+        ->toContain('href="{{ unsubscribe_url }}"')
+        ->not->toContain('%7B%7B')
+        ->and($renderer->render('<img src="{{ hero_image }}" alt="Kopf">'))
+        ->toContain('src="{{ hero_image }}"')
+        ->not->toContain('%7B%7B');
+
+    // Partly relative, partly tag: also left alone. Absolutising the front half
+    // would still encode the braces in the back half.
+    expect($renderer->render('<a href="/kurs/{{ slug }}">Kurs</a>'))
+        ->toContain('href="/kurs/{{ slug }}"');
+});
+
 it('renders ProseMirror nodes to HTML', function () {
     $nodes = [[
         'type' => 'paragraph',

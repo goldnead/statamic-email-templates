@@ -1,5 +1,40 @@
 # Changelog
 
+## 2.6.0 — 2026-09-03
+
+> **Wer 2.5.0 installiert hat, hebt direkt auf diese Fassung.** 2.5.0 macht eine
+> Bildadresse kaputt, die eine Merge-Variable enthält (`<img src="{{ hero_image }}">`).
+> Siehe unten.
+
+### Relative Links werden absolut, wie Bilder in 2.5.0
+
+`<a href="/kurs">` hat denselben Defekt wie ein relatives Bild: es löst im
+Browser gegen die Website auf und im Postfach gegen nichts. Der Leser klickt und
+landet im Leeren, ohne dass irgendwo ein Fehler steht.
+
+Unangetastet bleiben `mailto:`, `tel:`, alles andere mit Schema, absolute und
+protokollrelative Adressen sowie reine Anker (`#`). Ein `mailto:`, das zu
+`https://deine-seite.de/mailto:…` umgeschrieben wird, ist in jedem Programm ein
+toter Link, und `href="#"` ist ein absichtlicher Nicht-Link.
+
+Das läuft, bevor `statamic-automations` Links für die LeadHub-Klickverfolgung
+umschreibt. Das ist die richtige Reihenfolge: dieser Umschreiber braucht eine
+echte URL.
+
+### Behoben: 2.5.0 zerstörte Adressen mit Merge-Variablen
+
+Das Absolutmachen aus 2.5.0 lief über **jede** Bildadresse, auch über eine, die
+noch eine Merge-Variable enthielt. Die Substitution passiert erst danach, also
+stand zu diesem Zeitpunkt buchstäblich `{{ hero_image }}` im `src`. `url()`
+kodiert die geschweiften Klammern zu `%7B%7B`, die spätere Ersetzung findet ihr
+Muster nicht mehr, und der Empfänger bekommt eine Adresse, die nach der Variablen
+benannt ist statt nach dem Bild.
+
+Eine Adresse, die noch ein `{{ … }}` trägt, wird jetzt in Ruhe gelassen — Bild
+wie Link. Ein Abmeldelink hat genau diese Form, das ist also der Normalfall und
+kein Sonderfall. Wer eine Variable in einer Adresse benutzt, gibt dort eine
+absolute URL hinein.
+
 ## 2.5.0 — 2026-09-03
 
 ### Bilder in E-Mail-Vorlagen funktionieren

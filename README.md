@@ -324,23 +324,35 @@ inline styles and unknown attributes. **Tables are not kept.** Simple transactio
 templates round-trip cleanly; heavily styled legacy marketing HTML may lose styling.
 Put the styling in a layout rather than in the body.
 
-### Images
+### Addresses: images and links
 
-An `<img>` in a body survives both directions, and two things are done to it on the
-way into the mail:
+An address in an email body is resolved by a machine that knows nothing about the
+site that sent it. `/assets/flyer.png` and `/kurs` resolve against your site in a
+browser and against **nothing at all** in an inbox: the reader sees a broken image
+or clicks into the void, and nothing is logged anywhere.
 
-- **A relative source is made absolute.** A Statamic asset is stored as
-  `/assets/flyer.png`. That resolves against your site in a browser and against
-  nothing at all in an inbox — the recipient sees a broken image and no error is
-  logged anywhere. Sources that are already absolute, protocol-relative, `data:` or
-  `cid:` are left alone. The base is your `app.url`, so set it correctly.
-- **`max-width:100%;height:auto;border:0;` is added inline.** Without `max-width` a
-  1200px header graphic forces a sideways scroll in a phone client that ignores the
-  viewport. `border` rides in the style rather than as `border="0"` because
-  tiptap-php cannot emit an attribute whose value is `0`.
+So every relative `<img src>` and `<a href>` is made absolute against your
+`app.url` — set it correctly. Left exactly as written:
 
-Images are referenced by URL, not attached — mail clients fetch them, and many
-block that until the reader allows it. Give every image a meaningful `alt`.
+| Kind | Example | Why |
+|---|---|---|
+| Carries a merge tag | `{{ unsubscribe_url }}` | Substitution happens *after* rendering. Encoding the braces would break it. |
+| Has a scheme | `https:`, `mailto:`, `tel:`, `data:`, `cid:` | A rewritten `mailto:` is a dead link in every client. |
+| Protocol-relative | `//cdn.example/x.png` | Already absolute enough. |
+| Fragment | `#`, `#abschnitt` | `href="#"` is a deliberate non-link. |
+
+If you use a merge variable in an address, put an **absolute** URL in the variable.
+
+This runs before `statamic-automations` rewrites links for LeadHub click tracking,
+which is the order that rewriter needs.
+
+Images additionally get **`max-width:100%;height:auto;border:0;`** inline. Without
+`max-width` a 1200px header graphic forces a sideways scroll in a phone client that
+ignores the viewport. `border` rides in the style rather than as `border="0"`
+because tiptap-php cannot emit an attribute whose value is `0`.
+
+Images are referenced by URL, not attached — mail clients fetch them, and many block
+that until the reader allows it. Give every image a meaningful `alt`.
 
 ## Support
 
