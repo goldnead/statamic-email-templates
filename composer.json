@@ -56,7 +56,7 @@
             "description": "CP-native, Bard-authored email templates in a shared collection.",
             "url": "https://github.com/goldnead/statamic-email-templates",
             "developer": "Adrian Goldner",
-            "developer-url": "https://gldnr.studio"
+            "developer-url": "https://adriangoldner.dev"
         },
         "laravel": {
             "providers": [
