@@ -124,6 +124,26 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Send snapshots
+    |--------------------------------------------------------------------------
+    |
+    | What actually went out, held once for the whole suite: one row per send
+    | (not per recipient), carrying the template with its `{{ … }}` placeholders
+    | intact. marketing, notifications and automations write into it and read
+    | from it; nothing personal is stored, which is why the table needs no
+    | retention rule and no deletion concept.
+    |
+    | Off means nothing is recorded from that moment on and the consumers'
+    | detail pages stop showing a mail. Rows already written stay readable.
+    |
+    */
+
+    'snapshots' => [
+        'enabled' => true,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Countdown
     |--------------------------------------------------------------------------
     |

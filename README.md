@@ -237,15 +237,70 @@ adds no permission of its own.
 | `default_layout` | `null` | A handle from `layouts`, used for entries that pick none. |
 | `preview.sample_data` | see above | Deep-merged over the built-in merge-variable sample set. |
 | `test_send.subject_prefix` | `'[Test] '` | Put in front of the subject of a test send, so a test is recognisable in an inbox that also holds real mail. Empty string sends the subject exactly as a recipient would see it. |
+| `snapshots.enabled` | `true` | Whether a send is recorded — see [Send snapshots](#send-snapshots). `false` stops recording; rows already written stay readable. |
 
 Layout resolution for an entry: its own `layout`, else `default_layout`, else
 `branded_layout`. An unknown handle or a missing view falls through the chain —
 nothing throws mid-send.
 
+### Settings screen
+
+With `goldnead/statamic-brand-context` installed, five of these keys are editable
+per brand under **Control Panel → Settings**: `branded_layout`, `default_layout`,
+`snapshots.enabled`, `test_send.subject_prefix` and `countdown.image`. Only keys
+somebody actually changed are stored; everything else keeps following the config
+file, so upgrading the package still moves the defaults.
+
+`enabled`, `layouts` and `preview.sample_data` are deliberately **not** on that
+screen. `enabled` is read while the addon boots, and the settings layer applies
+its overrides afterwards — a switch there would only take effect on the next
+deploy. The other two are maps, not values: editing them means adding and
+removing rows, and a removed layout handle strands every template that chose it.
+
+## Send snapshots
+
+What actually went out, held once for the whole suite. One row per send — a
+campaign to 800 people is one row — carrying the **template with its `{{ … }}`
+placeholders intact**, never the rendered mail of a named person. Nothing
+personal is stored, so the table needs no retention rule and no deletion concept.
+Recipients are not copied either: they already exist on the sending addon's own
+tables.
+
+Consumers (`statamic-marketing`, `statamic-notifications`,
+`statamic-automations`) record a send and show it again:
+
+```php
+private const SNAPSHOTS = 'Goldnead\\EmailTemplates\\Snapshots\\Snapshots';
+
+// At send time, once — with the template, not with one recipient's mail.
+if (class_exists(self::SNAPSHOTS)) {
+    $class = self::SNAPSHOTS;
+
+    $snapshot = $class::record('marketing:campaign', $campaign->id, [
+        'subject' => $campaign->subject,
+        'body' => $templateHtml,
+        'slug' => $campaign->templateHandle,
+    ]);
+}
+
+// On the detail page — an iframe and nothing else.
+$url = $class::previewUrl($snapshot);
+```
+
+The key is `(owner_type, owner_id, content_hash)`: sending an unchanged template
+again reuses the row and counts it, sending an edited one writes a new row. An
+e-mail node that fires ten thousand times is one row.
+
+`record()` refuses content carrying a signed URL or a per-message tracking pixel,
+because that is the rendered mail of one recipient rather than the template.
+
 ## Permissions
 
-The addon registers **no permissions of its own**. Access is governed entirely by
-the collection's native permissions, which Statamic generates:
+- `manage email-templates settings` — the addon's section on the shared settings
+  screen. Nothing else in the addon checks it.
+
+Everything about the templates themselves is governed by the collection's native
+permissions, which Statamic generates:
 
 - `view et_templates entries` — controls the nav item and the listing
 - `edit et_templates entries`, `create et_templates entries`, `delete et_templates entries`

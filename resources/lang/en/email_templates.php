@@ -33,4 +33,12 @@ return [
     'test_send_failed' => 'Could not send “:template”: :reason|:failed of :total test emails could not be sent. “:template”: :reason',
     'test_send_empty_body' => 'The template has no body. There would be nothing to look at in the test email.',
     'test_send_no_subject' => '(no subject set)',
+
+    'snapshot_heading' => 'Sent on :sent_at',
+    'snapshot_sender' => 'Sender',
+    'snapshot_send_count' => 'sent once|sent :count times',
+    'snapshot_notice_sample' => 'The values shown are sample data. This is what the template looked like, not the mail of any one recipient.',
+    'snapshot_notice_today' => 'The values shown come from today\'s contact record, not from the day it was sent. The template itself is the one that went out.',
+
+    'permission_settings' => 'Manage settings',
 ];

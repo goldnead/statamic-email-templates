@@ -47,7 +47,10 @@
     "autoload-dev": {
         "psr-4": {
             "Goldnead\\EmailTemplates\\Tests\\": "tests/"
-        }
+        },
+        "files": [
+            "tests/Fakes/brand-context.php"
+        ]
     },
     "extra": {
         "statamic": {

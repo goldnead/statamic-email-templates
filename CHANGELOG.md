@@ -1,5 +1,52 @@
 # Changelog
 
+## Unveröffentlicht
+
+### Neu: die Snapshot-Schicht — was rausging, einmal fürs ganze Haus
+
+Marketing, Benachrichtigungen und Automations sollen auf ihrer Detailseite die
+Mail zeigen, nicht nur Statistiken. Dafür gibt es jetzt genau eine Stelle:
+`Goldnead\EmailTemplates\Snapshots\Snapshots`, dahinter die Tabelle
+`email_template_snapshots`.
+
+**Eine Zeile je Versand, nicht je Empfänger.** Eine Kampagne an 800 Leute ist
+eine Zeile. Gespeichert wird die **Vorlage mit ihren `{{ … }}`-Platzhaltern**,
+so wie sie beim Versand stand: Betreff, Körper, Nur-Text, Layout-Bezug, Marke und
+Absender. Nie die fertige Mail einer benannten Person. Weil kein
+personenbezogener Text hineinkommt, braucht diese Tabelle keine Aufbewahrungsfrist
+und kein Löschkonzept. Die Empfänger werden nicht kopiert; sie hängen weiter an
+den Tabellen der sendenden Addons.
+
+Der Schlüssel ist `(owner_type, owner_id, content_hash)`: derselbe Absender mit
+unveränderter Vorlage bekommt dieselbe Zeile und einen Zähler, eine geänderte
+Vorlage eine neue. Damit erzeugt ein E-Mail-Knoten, der zehntausendmal feuert,
+genau eine Zeile.
+
+`record()` weist Inhalt ab, der eine signierte URL oder einen
+Nachrichten-Zählpixel trägt — das ist die gerenderte Mail eines Empfängers und
+nicht die Vorlage. Der Versand bricht dabei nicht ab; die Ablehnung steht im Log.
+
+Dazu die Ansicht: `/cp/email-templates/snapshots/{id}/preview` zeigt einen
+Snapshot mit Platzhalterwerten. Ein Verbraucher, der die heutigen Daten eines
+bestimmten Kontakts einsetzen will, ruft `SnapshotPreview::document()` mit seinen
+eigenen Werten auf. Beide Fassungen sagen in der Oberfläche, woher die
+eingesetzten Werte stammen, und keine von beiden speichert das Ergebnis.
+
+### Neu: Einstellungsseite
+
+Mit `goldnead/statamic-brand-context` sind fünf Schlüssel je Marke im Control
+Panel änderbar: `branded_layout`, `default_layout`, `snapshots.enabled`,
+`test_send.subject_prefix` und `countdown.image`. Neues Recht:
+`manage email-templates settings`.
+
+Nicht auf der Seite: `enabled` (wird beim Booten gelesen, ein Schalter dort würde
+erst beim nächsten Deploy wirken), `layouts` und `preview.sample_data` (Tabellen,
+keine Werte). Die Gruppenbeschreibungen auf der Seite sagen das.
+
+### Neu: Konfiguration
+
+`snapshots.enabled` (Vorgabe `true`).
+
 ## 2.6.1 — 2026-09-03
 
 ### Behoben: die Live-Vorschau rendert unter der Marke der Vorlage

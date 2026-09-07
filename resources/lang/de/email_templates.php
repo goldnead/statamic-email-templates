@@ -33,4 +33,12 @@ return [
     'test_send_failed' => '„:template“ konnte nicht gesendet werden: :reason|:failed von :total Testmails konnten nicht gesendet werden. „:template“: :reason',
     'test_send_empty_body' => 'Die Vorlage hat keinen Inhalt. In der Testmail wäre nichts zu sehen.',
     'test_send_no_subject' => '(kein Betreff gesetzt)',
+
+    'snapshot_heading' => 'Versendet am :sent_at',
+    'snapshot_sender' => 'Absender',
+    'snapshot_send_count' => 'einmal versendet|:count mal versendet',
+    'snapshot_notice_sample' => 'Die eingesetzten Werte sind Beispieldaten. So sah die Vorlage aus, nicht die Mail eines bestimmten Empfängers.',
+    'snapshot_notice_today' => 'Die eingesetzten Werte stammen aus den heutigen Kontaktdaten, nicht vom Versandtag. Die Vorlage selbst ist die vom Versand.',
+
+    'permission_settings' => 'Einstellungen verwalten',
 ];

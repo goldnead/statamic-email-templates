@@ -2,6 +2,7 @@
 
 namespace Goldnead\EmailTemplates;
 
+use Goldnead\BrandContext\Settings\SettingsRegistry;
 use Goldnead\EmailTemplates\Actions\SendTestEmail;
 use Goldnead\EmailTemplates\Console\AssignBrandCommand;
 use Goldnead\EmailTemplates\Console\ImportEmailTemplatesCommand;
@@ -10,9 +11,11 @@ use Goldnead\EmailTemplates\Services\EmailTemplateCollectionManager;
 use Goldnead\EmailTemplates\Services\EmailTemplateResolver;
 use Goldnead\EmailTemplates\Support\Brands;
 use Goldnead\EmailTemplates\Support\MarketingEmailTemplateSource;
+use Goldnead\EmailTemplates\Support\Settings;
 use Illuminate\Support\Facades\Log;
 use Statamic\Facades\Collection;
 use Statamic\Facades\CP\Nav;
+use Statamic\Facades\Permission;
 use Statamic\Hooks\CP\EntriesIndexQuery;
 use Statamic\Providers\AddonServiceProvider;
 
@@ -54,6 +57,9 @@ class EmailTemplatesServiceProvider extends AddonServiceProvider
         'web' => __DIR__.'/../routes/web.php',
         // Under Statamic's action prefix (`/!/`): the PNG behind {{ countdown_image }}.
         'actions' => __DIR__.'/../routes/actions.php',
+        // Under `/cp/`, behind the CP's authentication: the snapshot preview
+        // that marketing, notifications and automations put in an iframe.
+        'cp' => __DIR__.'/../routes/cp.php',
     ];
 
     public function register(): void
@@ -110,10 +116,38 @@ class EmailTemplatesServiceProvider extends AddonServiceProvider
         ));
     }
 
+    /**
+     * Announce the settings to the suite's shared screen.
+     *
+     * In `boot()`, not `bootAddon()`, and that is not a style choice.
+     * brand-context applies the stored overrides from an `app->booted()`
+     * callback so that every provider's `boot()` has had its turn first.
+     * `bootAddon()` runs from an `app->booted()` callback of its own (Statamic's
+     * AppServiceProvider), and which of the two fires first depends on package
+     * load order — registering there would mean the settings reach the live
+     * config on some installs and not on others, with nothing on screen saying
+     * which.
+     *
+     * Guarded by `class_exists`, because brand-context is a suggest here and not
+     * a requirement: `Support\Settings` implements one of its interfaces, so it
+     * must not even be autoloaded on an install without the package.
+     */
+    public function boot(): void
+    {
+        parent::boot();
+
+        if (! class_exists(SettingsRegistry::class)) {
+            return;
+        }
+
+        $this->app->make(SettingsRegistry::class)->register(Settings::class);
+    }
+
     public function bootAddon(): void
     {
         $this->loadTranslationsFrom(__DIR__.'/../resources/lang', 'email-templates');
         $this->loadViewsFrom(__DIR__.'/../resources/views', 'email-templates');
+        $this->loadMigrationsFrom(__DIR__.'/../database/migrations');
 
         $this->publishes([
             __DIR__.'/../config/email-templates.php' => config_path('email-templates.php'),
@@ -121,7 +155,25 @@ class EmailTemplatesServiceProvider extends AddonServiceProvider
 
         $this->ensureCollection();
         $this->scopeListingToCurrentBrand();
+        $this->registerPermissions();
         $this->registerNavigation();
+    }
+
+    /**
+     * The one permission this addon registers.
+     *
+     * It gates the addon's section on the shared settings screen — the templates
+     * themselves are entries in a collection and are gated by Statamic's own
+     * collection permissions, which need nothing from here.
+     */
+    protected function registerPermissions(): void
+    {
+        if (! class_exists(Permission::class)) {
+            return;
+        }
+
+        Permission::register('manage email-templates settings')
+            ->label(__('email-templates::email_templates.permission_settings'));
     }
 
     /**
