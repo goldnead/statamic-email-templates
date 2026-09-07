@@ -30,7 +30,7 @@
     "suggest": {
         "goldnead/statamic-automations": "Send emails from workflow nodes using templates resolved by slug",
         "goldnead/statamic-marketing": "Import existing file-based marketing templates into the shared collection",
-        "goldnead/statamic-brand-context": "Previews the template with the current brand's sender instead of the host-wide one."
+        "goldnead/statamic-brand-context": "Previews the template with the current brand's sender instead of the host-wide one, and edits this addon's defaults in the Control Panel. Needs >= 1.13; older versions drop the override on the second save."
     },
     "require-dev": {
         "larastan/larastan": "^3.0",
