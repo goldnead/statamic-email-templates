@@ -2,164 +2,157 @@
 
 ## 2.7.0 — 2026-09-07
 
-### Neu: die Snapshot-Schicht — was rausging, einmal fürs ganze Haus
+### New: the snapshot layer — what went out, once for the whole house
 
-Marketing, Benachrichtigungen und Automations sollen auf ihrer Detailseite die
-Mail zeigen, nicht nur Statistiken. Dafür gibt es jetzt genau eine Stelle:
-`Goldnead\EmailTemplates\Snapshots\Snapshots`, dahinter die Tabelle
+Marketing, notifications and automations are meant to show the mail on their
+detail page, not only statistics. There is now exactly one place for that:
+`Goldnead\EmailTemplates\Snapshots\Snapshots`, and behind it the table
 `email_template_snapshots`.
 
-**Eine Zeile je Versand, nicht je Empfänger.** Eine Kampagne an 800 Leute ist
-eine Zeile. Gespeichert wird die **Vorlage mit ihren `{{ … }}`-Platzhaltern**,
-so wie sie beim Versand stand: Betreff, Körper, Nur-Text, Layout-Bezug, Marke und
-Absender. Nie die fertige Mail einer benannten Person. Weil kein
-personenbezogener Text hineinkommt, braucht diese Tabelle keine Aufbewahrungsfrist
-und kein Löschkonzept. Die Empfänger werden nicht kopiert; sie hängen weiter an
-den Tabellen der sendenden Addons.
+**One row per send, not per recipient.** A campaign to 800 people is one row.
+What is stored is the **template with its `{{ … }}` placeholders**, as it stood at
+the time of sending: subject, body, plain text, layout reference, brand and
+sender. Never the finished mail of a named person. Because no personal text goes
+into it, this table needs no retention period and no deletion concept. The
+recipients are not copied; they still hang on the tables of the sending addons.
 
-Der Schlüssel ist `(owner_type, owner_id, content_hash)`: derselbe Absender mit
-unveränderter Vorlage bekommt dieselbe Zeile und einen Zähler, eine geänderte
-Vorlage eine neue. Damit erzeugt ein E-Mail-Knoten, der zehntausendmal feuert,
-genau eine Zeile.
+The key is `(owner_type, owner_id, content_hash)`: the same sender with an
+unchanged template gets the same row and a counter, a changed template a new one.
+So an email node that fires ten thousand times produces exactly one row.
 
-`record()` weist Inhalt ab, der eine signierte URL oder einen
-Nachrichten-Zählpixel trägt — das ist die gerenderte Mail eines Empfängers und
-nicht die Vorlage. Der Versand bricht dabei nicht ab; die Ablehnung steht im Log.
+`record()` refuses content that carries a signed URL or a message tracking
+pixel — that is a recipient's rendered mail and not the template. The send does
+not abort over it; the refusal goes into the log.
 
-Dazu die Ansicht: `/cp/email-templates/snapshots/{id}/preview` zeigt einen
-Snapshot mit Platzhalterwerten. Ein Verbraucher, der die heutigen Daten eines
-bestimmten Kontakts einsetzen will, ruft `SnapshotPreview::document()` mit seinen
-eigenen Werten auf. Beide Fassungen sagen in der Oberfläche, woher die
-eingesetzten Werte stammen, und keine von beiden speichert das Ergebnis.
+Plus the view: `/cp/email-templates/snapshots/{id}/preview` shows a snapshot with
+placeholder values. A consumer that wants to insert a particular contact's data of
+today calls `SnapshotPreview::document()` with its own values. Both versions say
+in the interface where the inserted values come from, and neither of them stores
+the result.
 
-### Neu: Einstellungsseite
+### New: settings page
 
-Mit `goldnead/statamic-brand-context` sind fünf Schlüssel je Marke im Control
-Panel änderbar: `branded_layout`, `default_layout`, `snapshots.enabled`,
-`test_send.subject_prefix` und `countdown.image`. Neues Recht:
+With `goldnead/statamic-brand-context` five keys are changeable per brand in the
+Control Panel: `branded_layout`, `default_layout`, `snapshots.enabled`,
+`test_send.subject_prefix` and `countdown.image`. New permission:
 `manage email-templates settings`.
 
-Nicht auf der Seite: `enabled` (wird beim Booten gelesen, ein Schalter dort würde
-erst beim nächsten Deploy wirken), `layouts` und `preview.sample_data` (Tabellen,
-keine Werte). Die Gruppenbeschreibungen auf der Seite sagen das.
+Not on the page: `enabled` (read at boot, so a switch there would take effect only
+at the next deploy), `layouts` and `preview.sample_data` (tables, not values). The
+group descriptions on the page say so.
 
-Das Recht hat zunächst niemand: bis es einer Rolle zugewiesen ist, bleibt der
-Abschnitt unsichtbar, auch für Benutzer, die an diesem Addon sonst alles dürfen.
-Bestehende Rechte sind unverändert.
+Nobody holds the permission at first: until it is assigned to a role the section
+stays invisible, even for users who may do everything else in this addon. Existing
+permissions are unchanged.
 
-`statamic-brand-context` bleibt weich gebunden — ohne den Nachbarn meldet sich
-diese Seite nicht an und die Werte stehen wie bisher in der Config —, der
-`suggest` nennt jetzt aber eine Mindestfassung: **ab 1.13**. Ältere Fassungen
-tragen die Seite zwar, wenden ihre Werte aber nicht verlässlich an. Auf einer
-Installation mit einer einzigen Marke wurden die Einstellungen der zuletzt
-angemeldeten Addons gar nicht auf die Config gelegt, und bis 1.12 löschte ein
-zweites Speichern desselben Abschnitts die Überschreibung des ersten, ohne
-Meldung. Wer zwischen dem 06.09. und diesem Update Werte gesetzt hat, sieht nach
-dem Aktualisieren nach, ob sie noch dastehen.
+`statamic-brand-context` stays a soft dependency — without the neighbour this page
+does not register itself and the values stay in the config as before — but the
+`suggest` now names a minimum version: **1.13 or later**. Older versions do carry
+the page, but do not apply its values reliably. On an installation with a single
+brand the settings of the addons registered last were not laid onto the config at
+all, and up to 1.12 a second save of the same section deleted the first save's
+override without a message. If you set values between 09-06 and this update, check
+after updating whether they are still there.
 
-### Neu: Konfiguration
+### New: configuration
 
-`snapshots.enabled` (Vorgabe `true`).
+`snapshots.enabled` (default `true`).
 
 ## 2.6.1 — 2026-09-03
 
-### Behoben: die Live-Vorschau rendert unter der Marke der Vorlage
+### Fixed: the Live Preview renders under the template's brand
 
-Betrifft nur Installationen mit `goldnead/statamic-brand-context` und mehreren
-Marken.
+Affects only installations with `goldnead/statamic-brand-context` and several
+brands.
 
-Die Vorschau lief unter der Marke, die der **Request** aufgelöst hat, und das ist
-im Control Panel die Marke der angemeldeten Person. Wer eine Vorlage der Marke B
-als Nutzer der Marke A öffnete, sah deren Wortlaut in der Identität von A: der
-Absendername aus `{{ sender.name }}` gehörte A, und wo die Hülle der Host-App die
-Marke liest, auch deren Farbe. Eine überzeugende Vorschau der falschen Mail, und
-nichts auf dem Schirm sagte es.
+The preview ran under the brand the **request** resolved, and in the Control Panel
+that is the brand of the signed-in person. Anyone opening a template of brand B as
+a user of brand A saw its wording in A's identity: the sender name from
+`{{ sender.name }}` belonged to A, and wherever the host app's shell reads the
+brand, its colour did too. A convincing preview of the wrong mail, and nothing on
+screen said so.
 
-Der Render läuft jetzt in `Brands::runFor()` unter der Marke des Eintrags. Der
-Markenkontext des Betrachters steht danach wieder wie vorher.
+The render now runs inside `Brands::runFor()` under the entry's brand. The
+viewer's brand context stands as it did before afterwards.
 
-Vier Wege fallen bewusst auf das bisherige Verhalten zurück: eine Vorlage ohne
-Marke, eine Installation ohne brand-context, ein brand-context ohne `runFor`, und
-ein Handle, den es nicht mehr gibt. Der letzte Fall rendert die Mail ohne
-Markenwechsel, statt die Vorschau scheitern zu lassen.
+Four paths deliberately fall back to the previous behaviour: a template without a
+brand, an installation without brand-context, a brand-context without `runFor`,
+and a handle that no longer exists. The last case renders the mail without a brand
+switch instead of letting the preview fail.
 
-Gefunden auf `demo.adriangoldner.dev`. Der Regressionstest nennt die Marke, unter
-der gerendert wurde, statt sie aus einer Farbe zu schließen, und ist gegen den
-alten Code rot.
+Found on `demo.adriangoldner.dev`. The regression test names the brand it was
+rendered under instead of inferring it from a colour, and it is red against the
+old code.
 
 ## 2.6.0 — 2026-09-03
 
-> **Wer 2.5.0 installiert hat, hebt direkt auf diese Fassung.** 2.5.0 macht eine
-> Bildadresse kaputt, die eine Merge-Variable enthält (`<img src="{{ hero_image }}">`).
-> Siehe unten.
+> **Anyone who installed 2.5.0 should lift straight to this version.** 2.5.0 breaks
+> an image address that contains a merge variable (`<img src="{{ hero_image }}">`).
+> See below.
 
-### Relative Links werden absolut, wie Bilder in 2.5.0
+### Relative links become absolute, like images in 2.5.0
 
-`<a href="/kurs">` hat denselben Defekt wie ein relatives Bild: es löst im
-Browser gegen die Website auf und im Postfach gegen nichts. Der Leser klickt und
-landet im Leeren, ohne dass irgendwo ein Fehler steht.
+`<a href="/kurs">` has the same defect as a relative image: in the browser it
+resolves against the website and in the mailbox against nothing. The reader clicks
+and lands nowhere, without an error standing anywhere.
 
-Unangetastet bleiben `mailto:`, `tel:`, alles andere mit Schema, absolute und
-protokollrelative Adressen sowie reine Anker (`#`). Ein `mailto:`, das zu
-`https://deine-seite.de/mailto:…` umgeschrieben wird, ist in jedem Programm ein
-toter Link, und `href="#"` ist ein absichtlicher Nicht-Link.
+Left untouched are `mailto:`, `tel:`, everything else with a scheme, absolute and
+protocol-relative addresses, and pure anchors (`#`). A `mailto:` rewritten to
+`https://deine-seite.de/mailto:…` is a dead link in every program, and `href="#"`
+is a deliberate non-link.
 
-Das läuft, bevor `statamic-automations` Links für die LeadHub-Klickverfolgung
-umschreibt. Das ist die richtige Reihenfolge: dieser Umschreiber braucht eine
-echte URL.
+This runs before `statamic-automations` rewrites links for LeadHub click tracking.
+That is the right order: that rewriter needs a real URL.
 
-### Behoben: 2.5.0 zerstörte Adressen mit Merge-Variablen
+### Fixed: 2.5.0 destroyed addresses with merge variables
 
-Das Absolutmachen aus 2.5.0 lief über **jede** Bildadresse, auch über eine, die
-noch eine Merge-Variable enthielt. Die Substitution passiert erst danach, also
-stand zu diesem Zeitpunkt buchstäblich `{{ hero_image }}` im `src`. `url()`
-kodiert die geschweiften Klammern zu `%7B%7B`, die spätere Ersetzung findet ihr
-Muster nicht mehr, und der Empfänger bekommt eine Adresse, die nach der Variablen
-benannt ist statt nach dem Bild.
+The absolutising from 2.5.0 ran over **every** image address, including one that
+still contained a merge variable. The substitution happens only afterwards, so at
+that point the `src` literally held `{{ hero_image }}`. `url()` encodes the curly
+braces as `%7B%7B`, the later replacement no longer finds its pattern, and the
+recipient gets an address named after the variable instead of after the image.
 
-Eine Adresse, die noch ein `{{ … }}` trägt, wird jetzt in Ruhe gelassen — Bild
-wie Link. Ein Abmeldelink hat genau diese Form, das ist also der Normalfall und
-kein Sonderfall. Wer eine Variable in einer Adresse benutzt, gibt dort eine
-absolute URL hinein.
+An address that still carries a `{{ … }}` is now left alone — image as well as
+link. An unsubscribe link has exactly this shape, so that is the normal case and
+not a special one. Whoever uses a variable in an address puts an absolute URL in
+there.
 
 ## 2.5.0 — 2026-09-03
 
-### Bilder in E-Mail-Vorlagen funktionieren
+### Images in email templates work
 
-Ein `<img>` im Text einer Vorlage kam beim Empfänger nicht an. Es ging an zwei
-Stellen unabhängig voneinander verloren: `HtmlToBard` parste HTML mit einem
-tiptap-Schema ohne `image`-Node, also wurde ein Bild beim Import nie zu einem
-Knoten, und `BardHtmlRenderer` rendert einen `image`-Knoten, den er trotzdem
-bekam, als Leerstring. Keine der beiden Stellen meldete etwas. Der Docblock von
-`HtmlToBard` führte „images" ausdrücklich als erhalten auf, weshalb es beim
-Lesen des Codes nicht zu finden war.
+An `<img>` in a template's body did not reach the recipient. It was lost in two
+places independently of each other: `HtmlToBard` parsed HTML with a tiptap schema
+without an `image` node, so an image never became a node on import, and
+`BardHtmlRenderer` renders an `image` node it received anyway as an empty string.
+Neither place reported anything. `HtmlToBard`'s docblock expressly listed "images"
+as preserved, which is why it could not be found by reading the code.
 
-Beide Richtungen teilen sich jetzt eine Erweiterungsliste, `TiptapExtensions`.
-Ein Knoten, der dort dazukommt, gilt für Import und Ausgabe zugleich — sie
-können nicht wieder auseinanderlaufen.
+Both directions now share one extension list, `TiptapExtensions`. A node added
+there applies to import and to output at once — they cannot drift apart again.
 
-Dazu zwei Dinge, ohne die ein Bild in einer Mail nur halb funktioniert:
+Plus two things without which an image in a mail only half works:
 
-- **Relative Bildpfade werden absolut.** Ein Statamic-Asset steht als
-  `/assets/flyer.png` im Feld. Das löst im Browser gegen die Website auf und im
-  Postfach gegen nichts — der Empfänger sieht ein kaputtes Bild, ohne dass
-  irgendwo ein Fehler steht. Gilt auch für den Rohtext-Pfad, über den importierte
-  Alt-Vorlagen laufen. Absolute, protokollrelative, `data:`- und `cid:`-Quellen
-  bleiben unangetastet.
-- **Jedes Bild bekommt `max-width:100%;height:auto;border:0;`** als Inline-Style.
-  Ohne `max-width` erzwingt eine 1200px-Kopfgrafik in einem Handy-Client
-  Querscrollen. `border` steht im Style und nicht als `border="0"`, weil
-  tiptap-php ein Attribut mit dem Wert `0` gar nicht ausgeben kann:
-  `HTML::renderAttributes()` schickt das Attribut-Array durch `array_filter()`
-  ohne Callback, und `'0'` ist in PHP falsy.
+- **Relative image paths become absolute.** A Statamic asset stands in the field
+  as `/assets/flyer.png`. In the browser that resolves against the website and in
+  the mailbox against nothing — the recipient sees a broken image without an error
+  standing anywhere. Applies to the raw-text path as well, which imported legacy
+  templates go through. Absolute, protocol-relative, `data:` and `cid:` sources
+  stay untouched.
+- **Every image gets `max-width:100%;height:auto;border:0;`** as an inline style.
+  Without `max-width` a 1200px header graphic forces horizontal scrolling in a
+  phone client. `border` stands in the style and not as `border="0"`, because
+  tiptap-php cannot output an attribute with the value `0` at all:
+  `HTML::renderAttributes()` sends the attribute array through `array_filter()`
+  without a callback, and `'0'` is falsy in PHP.
 
-Die Leer-Body-Absage des Testversands zählt ein Bild jetzt als Inhalt. In 2.4.0
-war sie zufällig richtig, weil ohnehin nichts ankam.
+The test send's empty-body refusal now counts an image as content. In 2.4.0 it was
+right by accident, because nothing arrived anyway.
 
-**Tabellen bleiben draußen.** Derselbe Docblock behauptete sie auch, und auch
-das stimmte nicht. Eine Tabelle ist aber kein einzelner Knoten, sondern vier,
-und eine E-Mail-Tabelle will `cellpadding`, `cellspacing` und
-`role="presentation"`, die tiptap nicht ausgibt. Der Docblock sagt das jetzt.
+**Tables stay out.** The same docblock claimed them too, and that was not true
+either. But a table is not a single node, it is four, and an email table wants
+`cellpadding`, `cellspacing` and `role="presentation"`, which tiptap does not
+output. The docblock now says so.
 
 ## 2.4.0 — 2026-09-03
 
@@ -206,104 +199,102 @@ and `BardHtmlRenderer` renders a ProseMirror `image` node as the empty string.
 Pre-existing, not introduced here, and now covered by a test that fails when it
 is fixed.
 
-> Behoben in 2.5.0, am selben Tag.
+> Fixed in 2.5.0, on the same day.
 
 ## 2.3.0 — 2026-09-02
 
-> **Wer `goldnead/statamic-funnels` einsetzt, hebt es zusammen mit dieser Fassung auf 1.9.1.**
-> Seit dieser Fassung escaped `MergeVariables::apply()` die eingesetzten Werte. funnels 1.9.0
-> und älter reicht seine Bestellzeilen bereits als fertiges Markup herein und seinen Betreff
-> ohne Schalter; mit 2.3.0 allein stünde in der Mail dann `&amp;lt;br&amp;gt;` statt eines
-> Zeilenumbruchs. 1.9.1 benennt seine eigene Roh-Variable und schickt den Betreff ungeschützt.
-> Die beiden Fassungen gehören in denselben Schritt.
+> **Anyone using `goldnead/statamic-funnels` lifts it to 1.9.1 together with this version.**
+> From this version on, `MergeVariables::apply()` escapes the inserted values. funnels 1.9.0
+> and older already hands its order lines in as finished markup and its subject without a
+> switch; with 2.3.0 alone the mail would then read `&amp;lt;br&amp;gt;` instead of a line
+> break. 1.9.1 names its own raw variable and sends the subject unprotected. The two versions
+> belong in the same step.
 
-### Added — Countdown in einer Mail
+### Added — a countdown in a mail
 
-Zwei neue Tags für Launch-Mails (Kursstart, Anmeldeschluss), aufgelöst vom
-selben `MergeVariables::apply()`-Durchlauf wie alle anderen Variablen, also in
-der Live-Vorschau und beim Versand gleich:
+Two new tags for launch mails (course start, registration deadline), resolved by
+the same `MergeVariables::apply()` pass as every other variable, so they are the
+same in the Live Preview and when sending:
 
-- `{{ countdown until="2026-10-01 18:00" }}` schreibt zum Renderzeitpunkt
-  „noch 3 Tage, 4 Stunden (01.10.2026, 18:00 Uhr)". Zeitzone aus `app.timezone`,
-  Deutsch und Englisch nach App-Locale, `format="relative|absolute|both"`,
-  `expired="…"` für den Text nach Ablauf (Standard „vorbei"). `until` darf eine
-  Variable sein: `until="{{ event.starts_at }}"` oder `until="event.starts_at"`.
-  Ein `until`, das sich nicht auflösen lässt, lässt den Tag stehen, wie jede
-  unbekannte Variable. **Das ist die Fassung für neun von zehn Fällen:** kein
-  Bild, keine Route, funktioniert in jedem Client.
-- `{{ countdown_image until="…" width="480" }}` rendert ein `<img>` auf die
-  neue signierte Route `GET /!/statamic-email-templates/countdown.png` (Query
-  `until`, `w`, `bg`, `fg`, `label`, `expired`; `throttle:60,1`;
-  `Cache-Control: max-age=60`). GD zeichnet „dd : hh : mm" als Siebensegment-
-  Anzeige, nach Ablauf `00 : 00 : 00` plus „vorbei". Ohne `ext-gd` oder mit
-  `email-templates.countdown.image => false` antwortet die Route 404 und
-  schreibt eine Warnung ins Log. Ohne gültige Signatur 403.
+- `{{ countdown until="2026-10-01 18:00" }}` writes, at render time,
+  "3 days, 4 hours left (Oct 1, 2026, 18:00)". Time zone from `app.timezone`,
+  German and English by app locale, `format="relative|absolute|both"`,
+  `expired="…"` for the text after expiry (default "over"). `until` may be a
+  variable: `until="{{ event.starts_at }}"` or `until="event.starts_at"`. An
+  `until` that cannot be resolved leaves the tag standing, like any unknown
+  variable. **This is the version for nine cases out of ten:** no image, no route,
+  works in every client.
+- `{{ countdown_image until="…" width="480" }}` renders an `<img>` onto the new
+  signed route `GET /!/statamic-email-templates/countdown.png` (query `until`,
+  `w`, `bg`, `fg`, `label`, `expired`; `throttle:60,1`;
+  `Cache-Control: max-age=60`). GD draws "dd : hh : mm" as a seven-segment
+  display, after expiry `00 : 00 : 00` plus "over". Without `ext-gd`, or with
+  `email-templates.countdown.image => false`, the route answers 404 and writes a
+  warning to the log. Without a valid signature, 403.
 
-Die README sagt, was man sich mit dem Bild einkauft: Gmail holt es über seinen
-Proxy bei jedem Öffnen neu (und jedes Öffnen ist eine Anfrage an den Server),
-Apple Mail Privacy Protection holt es einmal vorab und zeigt danach dauerhaft
-diesen Stand.
+The README says what the image buys you: Gmail fetches it afresh through its proxy
+on every open (and every open is a request to the server), Apple Mail Privacy
+Protection fetches it once in advance and afterwards shows that state permanently.
 
-Dafür kamen `Support\Countdown`, `Support\FunctionTags` (der zweite, schmale
-Durchlauf für Tags mit Parametern, nach den einfachen `{{ dotted.key }}`),
+For it came `Support\Countdown`, `Support\FunctionTags` (the second, narrow pass
+for tags with parameters, after the simple `{{ dotted.key }}`),
 `Support\CountdownImage`, `Http\Controllers\CountdownImageController`,
-`routes/actions.php`, die Sprachdatei `countdown.php` (de/en) und der
-Config-Schlüssel `countdown.image`.
+`routes/actions.php`, the language file `countdown.php` (de/en) and the config key
+`countdown.image`.
 
-### Fixed — eingesetzte Werte landeten roh im HTML der Mail
+### Fixed — inserted values landed raw in the mail's HTML
 
-`MergeVariables::apply()` setzte jeden gelieferten Wert unverändert ein. Ein
-Name aus einem Formular mit `<script>` darin wurde damit zu Markup in einer Mail
-— dieselbe Klasse Fehler, die am selben Tag in `statamic-payments` behoben
-wurde. Die README nannte das ausdrücklich als Eigenschaft („inserted verbatim");
-das war eine Zusage, die niemand einlösen konnte, weil das versendende Addon den
-HTML-Kontext nicht kennt, in den sein Wert fällt.
+`MergeVariables::apply()` inserted every supplied value unchanged. A name from a
+form with a `<script>` in it thereby became markup in a mail — the same class of
+bug that was fixed in `statamic-payments` on the same day. The README named that
+expressly as a property ("inserted verbatim"); that was a promise nobody could
+keep, because the sending addon does not know the HTML context its value falls
+into.
 
-Skalare werden jetzt beim Einsetzen mit `e()` escaped. Zwei Ausnahmen, beide
-benannt statt stillschweigend:
+Scalars are now escaped with `e()` when inserted. Two exceptions, both named
+rather than silent:
 
-- **`MergeVariables::RAW_VARIABLES`** — heute `unsubscribe_url`, eine Adresse
-  dieses Pakets, die als `href` gebraucht wird. Hier stehen nur die Schlüssel,
-  die **dieses** Paket liefert: ein Name hier ist für jeden Konsumenten roh,
-  auch für die, die ihn nie escapt haben.
-- **`apply($text, $data, raw: ['order.lines'])`** — für Schlüssel, die der
-  Aufrufer selbst liefert und die schon Markup tragen. `statamic-funnels` baut
-  `order.lines` aus `e()`-escapten Teilen mit `<br>` dazwischen, weil eine Liste
-  von Bestellzeilen ohne Trenner-Markup nicht in eine HTML-Mail kommt. Der
-  Aufrufer nennt seinen Schlüssel pro Aufruf, statt ihn für alle roh zu machen,
-  und escaped wird weiterhin genau einmal je Wert. Positional übergeben, nicht
-  benannt: ein Konsument, der noch gegen 2.2.x läuft, ignoriert zusätzliche
-  Argumente stillschweigend, ein unbekanntes benanntes Argument wäre ein Fatal.
-- **`apply($text, $data, escape: false)`** — für Ausgaben, die kein HTML sind:
-  Betreffzeile und Plaintext-Teil. Dort wäre ein `&amp;` sichtbarer Schaden
-  statt Schutz. Die Live-Vorschau ruft so für Betreff und Preheader auf: beide
-  werden an ihrem Ausgabeort schon einmal escaped (`htmlspecialchars` im
-  Vorschau-Dokument bzw. in `EmailPreheader::html()`), ein zweites Mal ergäbe
-  `&amp;amp;`.
+- **`MergeVariables::RAW_VARIABLES`** — today `unsubscribe_url`, an address of
+  this package that is needed as an `href`. Only the keys **this** package
+  supplies stand here: a name here is raw for every consumer, including those that
+  never escaped it.
+- **`apply($text, $data, raw: ['order.lines'])`** — for keys the caller supplies
+  itself and that already carry markup. `statamic-funnels` builds `order.lines`
+  from `e()`-escaped parts with `<br>` between them, because a list of order lines
+  without separator markup does not make it into an HTML mail. The caller names
+  its key per call instead of making it raw for everybody, and escaping still
+  happens exactly once per value. Passed positionally, not by name: a consumer
+  still running against 2.2.x ignores additional arguments silently, while an
+  unknown named argument would be fatal.
+- **`apply($text, $data, escape: false)`** — for outputs that are not HTML:
+  subject line and plain-text part. There an `&amp;` would be visible damage
+  rather than protection. The Live Preview calls it that way for subject and
+  preheader: both are already escaped once at their point of output
+  (`htmlspecialchars` in the preview document and in `EmailPreheader::html()`
+  respectively); a second time would give `&amp;amp;`.
 
-Die Reihenfolge in `apply()` bleibt: erst die einfachen `{{ dotted.key }}` mit
-Escaping, danach `FunctionTags`. Das `<img>` von `{{ countdown_image }}`
-entsteht also **nach** dem Escaping und escaped seine eigenen Attribute, bleibt
-somit ein `<img>`.
+The order in `apply()` stays: first the simple `{{ dotted.key }}` with escaping,
+then `FunctionTags`. So the `<img>` from `{{ countdown_image }}` comes into being
+**after** the escaping and escapes its own attributes, and therefore stays an
+`<img>`.
 
-**Für Aufrufer:** wer heute `apply()` für eine Betreffzeile benutzt, muss
-`escape: false` nachtragen, sonst steht `&amp;` im Betreff.
+**For callers:** anyone using `apply()` for a subject line today has to add
+`escape: false`, otherwise the subject reads `&amp;`.
 
 ## 2.2.0 — 2026-08-24
 
-### Fixed — die Vorschau zeigte jeder Marke denselben Absender
+### Fixed — the preview showed every brand the same sender
 
-`MergeVariables` löste `{{ sender.name }}` und `{{ sender.email }}` aus
-`config('mail.from.*')` auf. Auf einem Host mit mehreren Marken hieß das: jede
-Vorlage wurde mit demselben Absender vorgeschaut, und für alle Marken bis auf
-eine war er falsch. **Gesendet wurde so nie etwas** — die Vorschau ist ein
-eigener Weg — aber eine Vorschau, deren Absender gelogen ist, taugt nicht für
-das eine, wofür man sie aufmacht.
+`MergeVariables` resolved `{{ sender.name }}` and `{{ sender.email }}` from
+`config('mail.from.*')`. On a host with several brands that meant every template
+was previewed with the same sender, and for all brands but one it was the wrong
+one. **Nothing was ever sent that way** — the preview is a path of its own — but a
+preview whose sender is a lie is no use for the one thing it is opened for.
 
-Steht `statamic-brand-context` zur Verfügung, kommt der Absender jetzt von der
-aktuellen Marke. **Die Kopplung ist optional** (`class_exists`, dazu ein
-`suggest`-Eintrag): dieses Paket verlangt brand-context nicht, und eine
-Installation ohne es verhält sich unverändert.
+Where `statamic-brand-context` is available, the sender now comes from the current
+brand. **The coupling is optional** (`class_exists`, plus a `suggest` entry): this
+package does not require brand-context, and an installation without it behaves
+unchanged.
 
 
 All notable changes to `statamic-email-templates` are documented here.
@@ -313,84 +304,82 @@ This file was reconstructed from the release tags on 2026-07-30; entries up to
 
 ## 2.1.2 — 2026-08-14
 
-### Fixed — das Nachrüsten des Marken-Feldes überschrieb den ganzen Blueprint
+### Fixed — retrofitting the brand field overwrote the whole blueprint
 
-Beim Upgrade auf 2.1.x wurde der Blueprint komplett neu geschrieben, statt nur
-das fehlende Feld einzusetzen. Der Blueprint liegt aber in `resources/` der
-Seite und darf dort bearbeitet worden sein — umsortierte Felder, geänderte
-Hinweistexte, ein lesbar benanntes `layout`-Wahlfeld. All das kam als
-Paket-Standard zurück.
+On the upgrade to 2.1.x the blueprint was rewritten completely instead of only
+inserting the missing field. But the blueprint lies in the site's `resources/` and
+is allowed to have been edited there — reordered fields, changed instructions, a
+readably named `layout` select field. All of that came back as the package
+default.
 
-Auf dem Hub genau so passiert: aus der Layout-Option
-`FamilyStack (Paper-Craft)` wurde `Familystack`, der aus dem Handle erzeugte
-Name. Nichts fiel aus, niemand bekam eine Meldung, und niemand schaut an dem Tag
-in diese Datei — das ist die Sorte Upgrade, die schlimmer ist als eine, die gar
-nichts tut.
+That is exactly what happened on the hub: the layout option
+`FamilyStack (Paper-Craft)` became `Familystack`, the name generated from the
+handle. Nothing failed, nobody got a message, and nobody looks into that file that
+day — this is the kind of upgrade that is worse than one that does nothing at all.
 
-Jetzt wird das Feld an das Ende des ersten Abschnitts **eingesetzt**, der Rest
-der Datei bleibt, wie die Seite ihn hat. Zwei Tests halten das fest: ein
-selbst hinzugefügtes Feld überlebt das Upgrade, und drei Bootvorgänge
-hintereinander erzeugen das Marken-Feld genau einmal.
+The field is now **inserted** at the end of the first section, and the rest of the
+file stays as the site has it. Two tests hold that in place: a field added by hand
+survives the upgrade, and three boots in a row create the brand field exactly
+once.
 
 ## 2.1.1 — 2026-08-14
 
-### Fixed — 2.1.0 ging aus einer veralteten Kopie hervor und war noch MIT
+### Fixed — 2.1.0 came out of an outdated copy and was still MIT
 
-Der Marken-Stand aus 2.1.0 wurde auf einem lokalen `main` gebaut, dem die beiden
-Commits aus 2.0.0 fehlten — der Lizenzwechsel auf proprietär und dessen
-CHANGELOG-Eintrag. Der Tag zeigt deshalb auf einen Stand, der `composer.json`
-und die Lizenzdatei noch mit MIT führt.
+The brand work from 2.1.0 was built on a local `main` that was missing the two
+commits from 2.0.0 — the licence switch to proprietary and its CHANGELOG entry.
+The tag therefore points at a state whose `composer.json` and licence file still
+say MIT.
 
-Am Code des Addons ändert sich zwischen 2.1.0 und 2.1.1 nichts: identische
-Klassen, identische Tests. Was dazukommt, ist der Merge mit 2.0.0.
+Nothing about the addon's code changes between 2.1.0 and 2.1.1: identical classes,
+identical tests. What is added is the merge with 2.0.0.
 
-`v2.1.0` bleibt, wo es ist. Eine veröffentlichte Version ist unveränderlich, und
-Packagist hat das Umhängen des Tags korrekt abgelehnt — der Weg dafür ist eine
-neue Version, nicht ein bewegter Tag.
+`v2.1.0` stays where it is. A published version is immutable, and Packagist
+correctly refused to move the tag — the way to do this is a new version, not a
+moved tag.
 
 ## 2.1.0 — 2026-08-14
 
-### Added — Vorlagen gehören zu einer Marke
+### Added — templates belong to a brand
 
-Auf einer Mehrmarken-Installation zeigte die Liste jeder Marke die Vorlagen aller Marken. Auf dem
-Hub hieß das: `?brand=gldnr-studio` und eine Liste FamilyStack-Mails. Der Markenumschalter änderte
-die Kopfzeile und sonst nichts.
+On a multi-brand installation the listing showed every brand the templates of all brands. On the
+hub that meant `?brand=gldnr-studio` and a list of FamilyStack mails. The brand switcher changed
+the header and nothing else.
 
-Die Ursache war nicht der Filter, sondern das fehlende Feld: dieses Addon kannte keine Marken.
-Statamics Eintragsliste kennt Sites, keine Marken, und ein Slug ist die Adresse, nach der jede
-Automation, jede Kampagne und jeder transaktionale Versand fragt — zwei Marken, die beide eine
-`welcome` verschicken, brauchen zwei `welcome` und keinen Weg zueinander.
+The cause was not the filter but the missing field: this addon knew no brands. Statamic's entry
+listing knows sites, not brands, and a slug is the address every automation, every campaign and
+every transactional send asks for — two brands that both send a `welcome` need two `welcome`s and
+no way from one to the other.
 
-Neu ist deshalb ein Pflichtfeld `brand` im Blueprint, ein Filter auf der Liste (über Statamics
-eigenen Haken `EntriesIndexQuery`, nicht über einen umgeschriebenen Controller) und die Auflösung
-per Slug innerhalb der aktuellen Marke.
+New is therefore a required `brand` field in the blueprint, a filter on the listing (through
+Statamic's own hook `EntriesIndexQuery`, not through a rewritten controller) and resolution by
+slug within the current brand.
 
-**Für Einmarken-Installationen ändert sich nichts.** `goldnead/statamic-brand-context` bleibt eine
-weiche Abhängigkeit: kein Composer-Eintrag, kein Klassenname außerhalb von `Support\Brands`, und
-ohne das Paket — oder mit ihm im Einmarken-Betrieb — ist das Blueprint Zeichen für Zeichen das
-alte, ohne Feld, ohne Filter.
+**For single-brand installations nothing changes.** `goldnead/statamic-brand-context` stays a
+soft dependency: no Composer entry, no class name outside `Support\Brands`, and without the
+package — or with it in single-brand operation — the blueprint is character for character the old
+one, without the field, without the filter.
 
-**Beim Umstieg** werden Vorlagen ohne Marke beim ersten Booten unter der **Standardmarke**
-abgelegt, dieselbe Antwort, die die Migration von brand-context ihren Tabellen gegeben hat. Das
-ist eine Vermutung, und sie ist auf dem Hub falsch: die sechs FamilyStack-Mails landen unter
-`default`. Sie ohne Marke zu lassen wäre schlimmer — dann fände sie niemand mehr, in keiner Liste
-und bei keinem Versand. Zum Geraderücken:
+**On migrating**, templates without a brand are filed under the **default brand** at the first
+boot, the same answer brand-context's migration gave its own tables. That is a guess, and on the
+hub it is the wrong one: the six FamilyStack mails land under `default`. Leaving them without a
+brand would be worse — then nobody would find them at all any more, in no listing and in no send.
+To put it straight:
 
 ```
 php please email-templates:assign-brand familystack --from=default --dry-run
 php please email-templates:assign-brand familystack --from=default
 ```
 
-Wo kein Versand seine Marke nennen kann (Konsole, Queue-Job außerhalb einer Marke), bleibt die
-Auflösung per Slug ungefiltert statt leer: „kann die Marke nicht nennen" ist nicht dasselbe wie
-„gehört zu keiner".
+Where no send can name its brand (console, a queue job outside a brand), resolution by slug stays
+unfiltered rather than empty: "cannot name the brand" is not the same as "belongs to none".
 
-### Fixed — „Email Templates" stand zweimal in der Seitenleiste
+### Fixed — "Email Templates" stood twice in the sidebar
 
-Statamic listet jede Collection unter Content → Collections, und das Addon legt darüber hinaus
-einen eigenen Menüpunkt an. Derselbe Schirm stand also zweimal im Menü, unter zwei Namen, und der
-ungewollte saß zwischen den echten Collections der Seite, als wären E-Mail-Vorlagen Seiten. Der
-automatische Eintrag wird jetzt entfernt.
+Statamic lists every collection under Content → Collections, and on top of that the addon creates
+a nav item of its own. So the same screen stood twice in the menu, under two names, and the
+unwanted one sat among the site's real collections, as if email templates were pages. The
+automatic entry is now removed.
 
 ## 2.0.0 — 2026-08-09
 
