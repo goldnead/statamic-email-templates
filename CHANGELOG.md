@@ -1,6 +1,6 @@
 # Changelog
 
-## Unveröffentlicht
+## 2.7.0 — 2026-09-07
 
 ### Neu: die Snapshot-Schicht — was rausging, einmal fürs ganze Haus
 
@@ -42,6 +42,20 @@ Panel änderbar: `branded_layout`, `default_layout`, `snapshots.enabled`,
 Nicht auf der Seite: `enabled` (wird beim Booten gelesen, ein Schalter dort würde
 erst beim nächsten Deploy wirken), `layouts` und `preview.sample_data` (Tabellen,
 keine Werte). Die Gruppenbeschreibungen auf der Seite sagen das.
+
+Das Recht hat zunächst niemand: bis es einer Rolle zugewiesen ist, bleibt der
+Abschnitt unsichtbar, auch für Benutzer, die an diesem Addon sonst alles dürfen.
+Bestehende Rechte sind unverändert.
+
+`statamic-brand-context` bleibt weich gebunden — ohne den Nachbarn meldet sich
+diese Seite nicht an und die Werte stehen wie bisher in der Config —, der
+`suggest` nennt jetzt aber eine Mindestfassung: **ab 1.13**. Ältere Fassungen
+tragen die Seite zwar, wenden ihre Werte aber nicht verlässlich an. Auf einer
+Installation mit einer einzigen Marke wurden die Einstellungen der zuletzt
+angemeldeten Addons gar nicht auf die Config gelegt, und bis 1.12 löschte ein
+zweites Speichern desselben Abschnitts die Überschreibung des ersten, ohne
+Meldung. Wer zwischen dem 06.09. und diesem Update Werte gesetzt hat, sieht nach
+dem Aktualisieren nach, ob sie noch dastehen.
 
 ### Neu: Konfiguration
 
