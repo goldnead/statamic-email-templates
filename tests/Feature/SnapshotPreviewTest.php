@@ -69,6 +69,55 @@ it('answers 404 for a snapshot that is not there', function () {
         ->assertNotFound();
 });
 
+/*
+ * Die Sendezeit im Kasten stand in der Zeitzone der ANWENDUNG, die Zeit im Kopf
+ * derselben Seite in der des Browsers. Auf adriangoldner.com ist `app.timezone`
+ * UTC, also standen dort zwei Zeiten fuer dieselbe Sendung, zwei Stunden
+ * auseinander: „Sent 18.9.2026, 20:03:50" oben, „Sent on 18.09.2026, 18:03"
+ * unten (gemessen am 18.09.2026).
+ *
+ * Die Zeitzone der Anwendung zu drehen waere der falsche Hebel: die Spalten
+ * halten UTC-Wanduhr ohne Kennung, und jeder bestehende Zeitstempel wuerde ab
+ * dann zwei Stunden zu frueh gelesen — lautlos. Gespeichert bleibt also UTC,
+ * und angezeigt wird in `Statamic::displayTimezone()`, der Schraube, die
+ * Statamic fuer genau diese Frage schon mitbringt.
+ */
+it('shows the send time in the display timezone, not the application one', function () {
+    config()->set('app.timezone', 'UTC');
+    config()->set('statamic.system.display_timezone', 'Europe/Berlin');
+
+    Snapshots::flush();
+
+    $snapshot = Snapshots::record('marketing:campaign', 7, [
+        'subject' => 'Zeitprobe',
+        'body' => '<p>Zeitprobe</p>',
+    ]);
+
+    // Genau der Wert, der auf staging in der Spalte steht: UTC-Wanduhr.
+    $snapshot->forceFill(['last_sent_at' => '2026-09-18 18:03:50'])->save();
+
+    $dokument = SnapshotPreview::document($snapshot->fresh());
+
+    expect($dokument)->toContain('18.09.2026, 20:03')
+        ->and($dokument)->not->toContain('18.09.2026, 18:03');
+});
+
+it('falls back to the application timezone where no display timezone is set', function () {
+    config()->set('app.timezone', 'UTC');
+    config()->set('statamic.system.display_timezone', null);
+
+    Snapshots::flush();
+
+    $snapshot = Snapshots::record('marketing:campaign', 8, [
+        'subject' => 'Zeitprobe',
+        'body' => '<p>Zeitprobe</p>',
+    ]);
+    $snapshot->forceFill(['last_sent_at' => '2026-09-18 18:03:50'])->save();
+
+    // Kein Verhalten erfunden: ohne eigene Einstellung bleibt alles wie bisher.
+    expect(SnapshotPreview::document($snapshot->fresh()))->toContain('18.09.2026, 18:03');
+});
+
 it('does not wrap a snapshot that is already a complete document', function () {
     Snapshots::flush();
 

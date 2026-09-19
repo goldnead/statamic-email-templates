@@ -1,5 +1,26 @@
 # Changelog
 
+## 2.7.1 — 2026-09-19
+
+### Fixed: the snapshot's send time is shown in the display timezone
+
+The heading over a snapshot preview — "Sent on …" — formatted in the **application's**
+timezone. The heading over the report page that links to it formats in the browser's. On a host
+whose `app.timezone` is UTC, the same send therefore appeared twice, two hours apart:
+"Sent 18.9.2026, 20:03:50" above and "Sent on 18.09.2026, 18:03" below.
+
+The obvious lever would have been to move `app.timezone`. It is the wrong one, and the
+measurement says why: the timestamp columns hold UTC wall-clock with no timezone marker. Turning
+the application's timezone does not make the display right — it makes every **already stored**
+timestamp read two hours early, silently, with nothing anywhere going red. Measured on a staging
+host on 19.09.2026: a campaign that went out at 20:03 Berlin sits in the column as
+`2026-09-18 18:03:50`.
+
+So storage stays UTC and the heading is formatted in `Statamic::displayTimezone()` — the knob
+Statamic already ships for exactly this question. With no `statamic.system.display_timezone` set
+it falls back to `app.timezone`, and nothing changes for installs that never had the problem.
+Both halves are covered in `tests/Feature/SnapshotPreviewTest.php`.
+
 ## 2.7.0 — 2026-09-07
 
 ### New: the snapshot layer — what went out, once for the whole house

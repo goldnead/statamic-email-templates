@@ -5,6 +5,7 @@ namespace Goldnead\EmailTemplates\Snapshots;
 use Goldnead\EmailTemplates\Support\BrandedBodyRenderer;
 use Goldnead\EmailTemplates\Support\Brands;
 use Goldnead\EmailTemplates\Support\MergeVariables;
+use Statamic\Statamic;
 
 /**
  * Renders a stored snapshot back into a readable mail.
@@ -72,7 +73,28 @@ class SnapshotPreview
             escape: false,
         );
 
-        $sentAt = $snapshot->last_sent_at?->format('d.m.Y, H:i') ?? '—';
+        /*
+         * Angezeigt in der Anzeige-Zeitzone, gespeichert bleibt UTC.
+         *
+         * Vorher formatierte diese Zeile in der Zeitzone der ANWENDUNG, waehrend
+         * die Kopfzeile derselben Berichtsseite im Browser formatiert. Auf einem
+         * Host mit `app.timezone = UTC` standen dort zwei Zeiten fuer dieselbe
+         * Sendung, zwei Stunden auseinander (gemessen am 18.09.2026:
+         * „Sent 18.9.2026, 20:03:50" oben, „Sent on 18.09.2026, 18:03" unten).
+         *
+         * Die Zeitzone der Anwendung zu drehen waere der falsche Hebel gewesen:
+         * die Spalten halten UTC-Wanduhr ohne Kennung, und jeder bereits
+         * gespeicherte Zeitstempel wuerde ab dann zwei Stunden zu frueh gelesen —
+         * lautlos, ohne dass irgendwo etwas rot wird.
+         *
+         * `Statamic::displayTimezone()` ist die Schraube, die Statamic fuer genau
+         * diese Frage mitbringt; ohne eigene Einstellung faellt sie auf
+         * `app.timezone` zurueck, und dann aendert sich hier nichts.
+         */
+        $sentAt = $snapshot->last_sent_at
+            ?->copy()
+            ->setTimezone(Statamic::displayTimezone())
+            ->format('d.m.Y, H:i') ?? '—';
 
         $notice = $mergeData === []
             ? (string) __('email-templates::email_templates.snapshot_notice_sample')
