@@ -3,6 +3,11 @@ includes:
     - phpstan-baseline.neon
 
 parameters:
+    # Meldet den View-Namensraum des Addons an, den bei der Analyse kein
+    # ServiceProvider anmeldet. Begruendung im Kopf der Datei.
+    bootstrapFiles:
+        - phpstan-bootstrap.php
+
     level: 5
 
     paths:

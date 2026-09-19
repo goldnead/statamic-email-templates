@@ -21,6 +21,23 @@ Statamic already ships for exactly this question. With no `statamic.system.displ
 it falls back to `app.timezone`, and nothing changes for installs that never had the problem.
 Both halves are covered in `tests/Feature/SnapshotPreviewTest.php`.
 
+### Fixed: static analysis can see this package's own views
+
+`View::make('email-templates::branded', …)` failed Larastan's `view-string` check — not because
+the view is missing, but because the analysis had no way to know it exists. Larastan asks the
+real view finder (`view()->exists($literal)`), and in an application the namespace is there
+because the service provider registered it with `loadViewsFrom()`. Analysing this package on its
+own, no provider runs, so the finder has no hint for `email-templates::` and a correct literal
+reads as a plain `string`.
+
+That is a gap in the analysis setup, not a finding about the code, and `phpstan-bootstrap.php`
+closes it by giving the finder the same hint the provider gives at runtime. The check is not
+weakened — it now works at all: a typo in the view name fails the run, which was verified by
+introducing one.
+
+It surfaced now because CI installs with `composer update` rather than the lockfile and picked
+up a newer Larastan that carries the `view-string` check. Locally green, in CI red.
+
 ## 2.7.0 — 2026-09-07
 
 ### New: the snapshot layer — what went out, once for the whole house
