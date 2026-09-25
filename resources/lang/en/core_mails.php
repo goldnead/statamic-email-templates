@@ -13,7 +13,7 @@ return [
 
     'password_reset' => [
         'title' => 'Password reset (website)',
-        'trigger' => 'Someone asks for a new password on the website',
+        'trigger' => 'Forgot password on the website',
         'subject' => 'Your new password for {{ site_name }}',
         'preview' => 'Use this link to set a new password.',
         'body' => '<p>Hello {{ user.name }},</p>'
@@ -24,7 +24,7 @@ return [
 
     'password_reset_cp' => [
         'title' => 'Password reset (Control Panel)',
-        'trigger' => 'Someone asks for a new password on the Control Panel login screen',
+        'trigger' => 'Forgot password in the Control Panel',
         'subject' => 'Your new Control Panel password for {{ site_name }}',
         'preview' => 'Use this link to set a new password.',
         'body' => '<p>Hello {{ user.name }},</p>'
@@ -35,7 +35,7 @@ return [
 
     'activate_account' => [
         'title' => 'Activate account (invitation)',
-        'trigger' => 'A new account is created and the activation invitation is sent',
+        'trigger' => 'New account created, activation invitation',
         'subject' => 'Your account at {{ site_name }}',
         'preview' => 'Set your password and your account is ready.',
         'body' => '<p>Hello {{ user.name }},</p>'
@@ -47,7 +47,7 @@ return [
 
     'verification_code' => [
         'title' => 'Verification code',
-        'trigger' => 'Someone has to confirm who they are before a protected action and has no two-factor app set up',
+        'trigger' => 'Re-confirmation without a two-factor app',
         'subject' => 'Your verification code for {{ site_name }}',
         'preview' => 'Paste the code into the window where you asked for it.',
         'body' => '<p>Hello {{ user.name }},</p>'
@@ -58,7 +58,7 @@ return [
 
     'verify_email' => [
         'title' => 'Verify email address',
-        'trigger' => 'A new account has to confirm its email address (Laravel MustVerifyEmail)',
+        'trigger' => 'New account confirms its address (Laravel)',
         'subject' => 'Confirm your email address for {{ site_name }}',
         'preview' => 'One click and your account is unlocked.',
         'body' => '<p>Hello {{ user.name }},</p>'

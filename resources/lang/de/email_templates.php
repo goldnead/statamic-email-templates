@@ -21,9 +21,9 @@ return [
     'field_description' => 'Beschreibung',
     'field_description_instructions' => 'Interne Notiz. Wird nicht an Empfänger gesendet.',
     'field_sent_on' => 'Verschickt bei',
-    'field_sent_on_instructions' => 'Welches Addon diese Vorlage verschickt und bei welchem Anlass. Leer heißt: kein installiertes Addon meldet sie an, sie wird nur verschickt, wenn eigener Code sie aufruft.',
+    'field_sent_on_instructions' => 'Welches Addon sie bei welchem Anlass verschickt. Leer: nur eigener Code ruft sie auf.',
     'field_placeholders' => 'Platzhalter',
-    'field_placeholders_instructions' => 'Diese Werte setzt der Absender beim Versand ein. In der Live-Vorschau und in der Testmail stehen Beispielwerte.',
+    'field_placeholders_instructions' => 'Setzt der Absender beim Versand ein. Vorschau und Testmail zeigen Beispielwerte.',
     'live_preview_target' => 'E-Mail',
     'live_preview_empty' => 'Keine Live-Vorschau verfügbar. Öffne die Vorschau aus der Bearbeitung einer Vorlage.',
 

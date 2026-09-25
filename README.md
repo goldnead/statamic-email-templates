@@ -402,7 +402,7 @@ offers the same methods (`register`, `find`, `all`, `byAddon`, `describe`, `exam
 
 What registering buys:
 
-- **"Sent on" in the listing and on the edit form**: `Jemand wird in ein Team eingeladen (Teams)`.
+- **"Sent on" in the listing and on the edit form**: `Teams: Jemand wird in ein Team eingeladen`.
   A template no addon claims shows nothing there; one that only comes from a tagged
   import source shows the source's label.
 - **The placeholder list** on the edit form's sidebar.

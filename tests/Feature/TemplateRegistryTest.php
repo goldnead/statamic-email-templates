@@ -50,7 +50,7 @@ it('describes a registered template as occasion and addon', function () {
 
     $definition = EmailTemplateRegistry::find('teams-invitation');
 
-    expect(EmailTemplateRegistry::describe('teams-invitation'))->toBe('Jemand wird in ein Team eingeladen (Teams)')
+    expect(EmailTemplateRegistry::describe('teams-invitation'))->toBe('Teams: Jemand wird in ein Team eingeladen')
         ->and($definition->event)->toBe('Goldnead\Teams\Events\InvitationSent')
         ->and($definition->placeholders()['url']['label'])->toBe('Link zur Einladung')
         ->and(EmailTemplateRegistry::examples('teams-invitation'))->toBe(['team' => ['name' => 'Sopran 1']]);
@@ -144,8 +144,8 @@ it('shows "Sent on" in the Control Panel listing', function () {
 
     $rows = collect($response->json('data'))->keyBy('title');
 
-    expect($rows['Team-Einladung']['sent_on'])->toBe('Jemand wird in ein Team eingeladen (Teams)')
-        ->and($rows['Reset']['sent_on'])->toBe(__('email-templates::core_mails.password_reset.trigger').' (Statamic)')
+    expect($rows['Team-Einladung']['sent_on'])->toBe('Teams: Jemand wird in ein Team eingeladen')
+        ->and($rows['Reset']['sent_on'])->toBe('Statamic: '.__('email-templates::core_mails.password_reset.trigger'))
         ->and($rows['Eigene']['sent_on'])->toBeNull()
         ->and(collect($response->json('meta.columns'))->pluck('field'))->toContain('sent_on');
 });
@@ -161,7 +161,7 @@ it('lists the placeholders on the edit form, without saving them into the bluepr
 
     expect($html)->toContain('template_placeholders')
         ->and($html)->toContain('team.name')
-        ->and($html)->toContain('Jemand wird in ein Team eingeladen (Teams)');
+        ->and($html)->toContain('Teams: Jemand wird in ein Team eingeladen');
 
     // The file on disk, not the in-memory object: the in-memory one is the
     // same instance the listener extended for this request.

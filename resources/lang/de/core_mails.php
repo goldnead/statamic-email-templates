@@ -13,7 +13,7 @@ return [
 
     'password_reset' => [
         'title' => 'Passwort zurücksetzen (Website)',
-        'trigger' => 'Jemand fordert auf der Website ein neues Passwort an',
+        'trigger' => 'Passwort vergessen auf der Website',
         'subject' => 'Neues Passwort für {{ site_name }}',
         'preview' => 'Mit diesem Link legst du ein neues Passwort fest.',
         'body' => '<p>Hallo {{ user.name }},</p>'
@@ -24,7 +24,7 @@ return [
 
     'password_reset_cp' => [
         'title' => 'Passwort zurücksetzen (Control Panel)',
-        'trigger' => 'Jemand fordert auf der Anmeldeseite des Control Panels ein neues Passwort an',
+        'trigger' => 'Passwort vergessen im Control Panel',
         'subject' => 'Neues Passwort für das Control Panel von {{ site_name }}',
         'preview' => 'Mit diesem Link legst du ein neues Passwort fest.',
         'body' => '<p>Hallo {{ user.name }},</p>'
@@ -35,7 +35,7 @@ return [
 
     'activate_account' => [
         'title' => 'Konto aktivieren (Einladung)',
-        'trigger' => 'Ein neues Konto wird angelegt und die Einladung zum Aktivieren verschickt',
+        'trigger' => 'Neues Konto angelegt, Einladung zum Aktivieren',
         'subject' => 'Dein Konto bei {{ site_name }}',
         'preview' => 'Leg dein Passwort fest, dann ist dein Konto bereit.',
         'body' => '<p>Hallo {{ user.name }},</p>'
@@ -47,7 +47,7 @@ return [
 
     'verification_code' => [
         'title' => 'Bestätigungscode',
-        'trigger' => 'Jemand muss sich vor einer geschützten Aktion erneut ausweisen und hat keine Zwei-Faktor-App eingerichtet',
+        'trigger' => 'Erneute Bestätigung ohne Zwei-Faktor-App',
         'subject' => 'Dein Bestätigungscode für {{ site_name }}',
         'preview' => 'Kopiere den Code in das Fenster, in dem du ihn angefordert hast.',
         'body' => '<p>Hallo {{ user.name }},</p>'
@@ -58,7 +58,7 @@ return [
 
     'verify_email' => [
         'title' => 'E-Mail-Adresse bestätigen',
-        'trigger' => 'Ein neues Konto muss seine E-Mail-Adresse bestätigen (Laravel MustVerifyEmail)',
+        'trigger' => 'Neues Konto bestätigt seine Adresse (Laravel)',
         'subject' => 'Bestätige deine E-Mail-Adresse für {{ site_name }}',
         'preview' => 'Ein Klick, dann ist dein Konto freigeschaltet.',
         'body' => '<p>Hallo {{ user.name }},</p>'

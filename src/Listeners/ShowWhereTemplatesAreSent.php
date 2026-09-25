@@ -39,8 +39,10 @@ class ShowWhereTemplatesAreSent
             return;
         }
 
+        // A textarea, not a text input: read-only, a single-line input cut
+        // "Statamic: Passwort vergessen auf der Website" off in the sidebar.
         $event->blueprint->ensureField(self::FIELD, [
-            'type' => 'text',
+            'type' => 'textarea',
             'display' => __('email-templates::email_templates.field_sent_on'),
             'instructions' => __('email-templates::email_templates.field_sent_on_instructions'),
             'visibility' => 'computed',
@@ -57,6 +59,7 @@ class ShowWhereTemplatesAreSent
         $event->blueprint->ensureField(self::PLACEHOLDERS_FIELD, [
             'type' => 'html',
             'display' => __('email-templates::email_templates.field_placeholders'),
+            'instructions' => __('email-templates::email_templates.field_placeholders_instructions'),
             'html' => $this->placeholderTable($definition->placeholders()),
             'listable' => false,
             'localizable' => false,
@@ -68,16 +71,18 @@ class ShowWhereTemplatesAreSent
      */
     protected function placeholderTable(array $placeholders): string
     {
-        $rows = '';
+        // Stacked, not a two-column table: the sidebar is about 280px wide,
+        // and a tag like `{{ expires_minutes }}` next to its label left the
+        // label a word per line. Colours are inherited so dark mode follows.
+        $items = '';
 
         foreach ($placeholders as $key => $spec) {
-            $rows .= '<tr>'
-                .'<td style="padding:4px 12px 4px 0;white-space:nowrap;vertical-align:top"><code>{{ '.e($key).' }}</code></td>'
-                .'<td style="padding:4px 0;vertical-align:top">'.e($spec['label']).'</td>'
-                .'</tr>';
+            $items .= '<li style="margin:0 0 10px">'
+                .'<code style="font-size:12px">{{ '.e($key).' }}</code>'
+                .'<div style="font-size:13px;opacity:.75;margin-top:2px">'.e($spec['label']).'</div>'
+                .'</li>';
         }
 
-        return '<p style="margin:0 0 8px">'.e(__('email-templates::email_templates.field_placeholders_instructions')).'</p>'
-            .'<table style="font-size:13px;border-collapse:collapse">'.$rows.'</table>';
+        return '<ul style="list-style:none;margin:0;padding:0">'.$items.'</ul>';
     }
 }

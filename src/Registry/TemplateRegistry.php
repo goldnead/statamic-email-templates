@@ -79,7 +79,7 @@ class TemplateRegistry
     }
 
     /**
-     * The line the Control Panel shows for a template: "<occasion> (<addon>)",
+     * The line the Control Panel shows for a template: "<addon>: <occasion>",
      * the addon alone for an import-only source, or null when nobody claims it.
      */
     public function describe(string $slug): ?string
@@ -89,7 +89,9 @@ class TemplateRegistry
             $addon = $definition->addon();
 
             return match (true) {
-                $trigger !== '' && $addon !== '' => "{$trigger} ({$addon})",
+                // Addon first: the listing truncates long cells, and "who
+                // sends it" is the part that must survive.
+                $trigger !== '' && $addon !== '' => "{$addon}: {$trigger}",
                 $trigger !== '' => $trigger,
                 $addon !== '' => $addon,
                 default => null,
