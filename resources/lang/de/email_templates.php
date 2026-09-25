@@ -20,6 +20,10 @@ return [
     'field_brand_instructions' => 'Zu welcher Marke diese Vorlage gehört. Gefunden wird sie nur von ihrer eigenen Marke, deshalb können zwei Marken je eine eigene Vorlage unter demselben Slug haben.',
     'field_description' => 'Beschreibung',
     'field_description_instructions' => 'Interne Notiz. Wird nicht an Empfänger gesendet.',
+    'field_sent_on' => 'Verschickt bei',
+    'field_sent_on_instructions' => 'Welches Addon diese Vorlage verschickt und bei welchem Anlass. Leer heißt: kein installiertes Addon meldet sie an, sie wird nur verschickt, wenn eigener Code sie aufruft.',
+    'field_placeholders' => 'Platzhalter',
+    'field_placeholders_instructions' => 'Diese Werte setzt der Absender beim Versand ein. In der Live-Vorschau und in der Testmail stehen Beispielwerte.',
     'live_preview_target' => 'E-Mail',
     'live_preview_empty' => 'Keine Live-Vorschau verfügbar. Öffne die Vorschau aus der Bearbeitung einer Vorlage.',
 

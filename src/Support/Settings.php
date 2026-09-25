@@ -102,6 +102,15 @@ class Settings implements ProvidesSettings
                 ],
             ],
             [
+                'title' => __('email-templates::settings.groups.core_mails.title'),
+                'description' => __('email-templates::settings.groups.core_mails.description'),
+                'fields' => [
+                    // Read per send in SendCoreMailsFromTemplates, never at
+                    // boot, so a change here takes effect on the next mail.
+                    static::field('core_mails.enabled', 'boolean'),
+                ],
+            ],
+            [
                 'title' => __('email-templates::settings.groups.countdown.title'),
                 'description' => __('email-templates::settings.groups.countdown.description'),
                 'fields' => [

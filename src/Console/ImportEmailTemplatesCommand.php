@@ -3,6 +3,9 @@
 namespace Goldnead\EmailTemplates\Console;
 
 use Goldnead\EmailTemplates\Contracts\EmailTemplateSource;
+use Goldnead\EmailTemplates\CoreMails\CoreMails;
+use Goldnead\EmailTemplates\Registry\RegistryTemplateSource;
+use Goldnead\EmailTemplates\Registry\TemplateRegistry;
 use Goldnead\EmailTemplates\Services\EmailTemplateCollectionManager;
 use Goldnead\EmailTemplates\Support\EmailTemplateData;
 use Illuminate\Console\Command;
@@ -18,7 +21,8 @@ class ImportEmailTemplatesCommand extends Command
     protected $signature = 'email-templates:import
         {--dry-run : List what would be imported without writing any entries}
         {--overwrite : Overwrite entries whose slug already exists}
-        {--source= : Only import from a single source (matched against its label)}';
+        {--source= : Only import from a single source (matched against its label)}
+        {--locale= : Language of the shipped default texts, e.g. de or en (default: the app locale)}';
 
     protected $description = 'Import file-based email templates from sibling addons into the et_templates collection.';
 
@@ -32,8 +36,25 @@ class ImportEmailTemplatesCommand extends Command
             $collection->ensure();
         }
 
-        /** @var iterable<EmailTemplateSource> $sources */
-        $sources = app()->tagged('email-templates.sources');
+        if (is_string($locale = $this->option('locale')) && $locale !== '') {
+            app()->setLocale($locale);
+        }
+
+        // Tagged sources first, then the registered defaults of each addon.
+        // An addon that does both offers the same slug twice; the second offer
+        // is skipped as "exists" like any other.
+        $sources = [...app()->tagged('email-templates.sources')];
+
+        foreach (app(TemplateRegistry::class)->byAddon() as $addon => $definitions) {
+            // The core account mails only arrive when asked for: by name, or
+            // because the site switched them on. A plain import run for a
+            // marketing migration should not leave five new entries behind.
+            if ($addon === CoreMails::ADDON && $only !== CoreMails::ADDON && ! config('email-templates.core_mails.enabled', false)) {
+                continue;
+            }
+
+            $sources[] = new RegistryTemplateSource($addon, $definitions);
+        }
 
         $created = 0;
         $updated = 0;

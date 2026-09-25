@@ -1,5 +1,27 @@
 # Changelog
 
+## Unreleased
+
+### Added: a registry for which mail goes out when
+
+Addons announce their mails with `app('email-templates.registry')->register([...])`
+(or the `EmailTemplateRegistry` facade): slug, sending addon, occasion, optional event
+class, placeholders with labels and examples, and the shipped default text. The
+template listing gains a **Sent on** column, the edit form lists the placeholders,
+Live Preview and the test send fill in the examples, and `email-templates:import`
+writes the defaults (`--locale=de|en` is new). Templates offered only through a
+tagged import source show that source's label.
+
+### Added: Statamic's and Laravel's account mails as templates
+
+Opt-in via `core_mails.enabled` (default off, also on the settings screen). Password
+reset (website and CP login), account activation / invitation, the elevated session
+verification code and Laravel's `VerifyEmail` are sent from the published template
+with the slugs `core-password-reset`, `core-password-reset-cp`,
+`core-activate-account`, `core-verification-code` and `core-verify-email`. Without a
+published template the core mail goes out unchanged. German and English defaults ship
+with the package.
+
 ## 2.7.1 — 2026-09-19
 
 ### Fixed: the snapshot's send time is shown in the display timezone

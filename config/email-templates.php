@@ -159,4 +159,28 @@ return [
         'image' => true,
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Core account mails
+    |--------------------------------------------------------------------------
+    |
+    | Statamic and Laravel send a few account mails on their own: password
+    | reset (website and CP login), account activation / invitation, the
+    | verification code for an elevated session, and Laravel's "verify your
+    | email address". With `enabled` on, each one is sent from the template
+    | with its slug instead — `core-password-reset`, `core-password-reset-cp`,
+    | `core-activate-account`, `core-verification-code`, `core-verify-email` —
+    | as long as that template exists and is published. Without a template
+    | the core mail goes out unchanged.
+    |
+    | Off by default, so an existing install keeps sending exactly what it
+    | sent before. `php please email-templates:import --source=Statamic`
+    | writes the shipped German or English defaults (`--locale=de|en`).
+    |
+    */
+
+    'core_mails' => [
+        'enabled' => false,
+    ],
+
 ];

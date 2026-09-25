@@ -6,7 +6,10 @@ use Goldnead\BrandContext\Settings\SettingsRegistry;
 use Goldnead\EmailTemplates\Actions\SendTestEmail;
 use Goldnead\EmailTemplates\Console\AssignBrandCommand;
 use Goldnead\EmailTemplates\Console\ImportEmailTemplatesCommand;
+use Goldnead\EmailTemplates\CoreMails\CoreMails;
 use Goldnead\EmailTemplates\Entries\EmailTemplateEntry;
+use Goldnead\EmailTemplates\Listeners\ShowWhereTemplatesAreSent;
+use Goldnead\EmailTemplates\Registry\TemplateRegistry;
 use Goldnead\EmailTemplates\Services\EmailTemplateCollectionManager;
 use Goldnead\EmailTemplates\Services\EmailTemplateResolver;
 use Goldnead\EmailTemplates\Support\Brands;
@@ -80,6 +83,21 @@ class EmailTemplatesServiceProvider extends AddonServiceProvider
         // marketing source is a soft dependency (no-op when marketing absent).
         $this->app->bind(MarketingEmailTemplateSource::class);
         $this->app->tag([MarketingEmailTemplateSource::class], 'email-templates.sources');
+
+        // Where addons announce which mail goes out when. The string alias
+        // lets a sibling register without importing a class from here.
+        //
+        // The account mails of Statamic and Laravel are registered like any
+        // addon's. Sending them from templates is still off until the
+        // `core_mails.enabled` setting says otherwise.
+        $this->app->singleton(TemplateRegistry::class, function () {
+            $registry = new TemplateRegistry;
+            CoreMails::register($registry);
+
+            return $registry;
+        });
+        $this->app->alias(TemplateRegistry::class, TemplateRegistry::ALIAS);
+        $this->app->singleton(CoreMails::class);
     }
 
     /**
@@ -154,6 +172,7 @@ class EmailTemplatesServiceProvider extends AddonServiceProvider
         ], 'email-templates-config');
 
         $this->ensureCollection();
+        $this->computeWhereTemplatesAreSent();
         $this->scopeListingToCurrentBrand();
         $this->registerPermissions();
         $this->registerNavigation();
@@ -174,6 +193,24 @@ class EmailTemplatesServiceProvider extends AddonServiceProvider
 
         Permission::register('manage email-templates settings')
             ->label(__('email-templates::email_templates.permission_settings'));
+    }
+
+    /**
+     * The value behind the "Sent on" column: which addon sends a template, and
+     * on which occasion, as registered in {@see TemplateRegistry}. Empty for a
+     * template nobody claims, which is the site's own.
+     *
+     * A computed value, not stored data: it follows the installed code, so an
+     * addon update that renames its occasion shows up without touching content.
+     * The field it fills is added by {@see ShowWhereTemplatesAreSent}.
+     */
+    protected function computeWhereTemplatesAreSent(): void
+    {
+        Collection::computed(
+            EmailTemplateCollectionManager::HANDLE,
+            ShowWhereTemplatesAreSent::FIELD,
+            fn ($entry) => $this->app->make(TemplateRegistry::class)->describe((string) $entry->slug()),
+        );
     }
 
     /**

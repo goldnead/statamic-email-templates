@@ -28,6 +28,11 @@ return [
             'description' => 'Die Testmail, die im Control Panel neben „Speichern" liegt. Sie geht denselben Weg wie ein echter Versand, nur an eine selbst eingetippte Adresse.',
         ],
 
+        'core_mails' => [
+            'title' => 'Konto-Mails von Statamic und Laravel',
+            'description' => 'Passwort zurücksetzen (Website und Control Panel), Konto aktivieren, Bestätigungscode und E-Mail-Adresse bestätigen. Eingeschaltet geht jede dieser Mails aus der veröffentlichten Vorlage mit ihrem Slug raus (core-password-reset, core-password-reset-cp, core-activate-account, core-verification-code, core-verify-email). Fehlt die Vorlage oder ist sie ein Entwurf, geht die Mail von Statamic unverändert raus. Die mitgelieferten Vorlagen legt `php please email-templates:import --source=Statamic --locale=de` an.',
+        ],
+
         'countdown' => [
             'title' => 'Countdown',
             'description' => 'Der Bild-Countdown, der die Restzeit als PNG ausliefert. Der Text-Countdown braucht davon nichts und läuft immer.',
@@ -55,6 +60,11 @@ return [
         'test_send_subject_prefix' => [
             'label' => 'Betreff-Präfix der Testmail',
             'description' => 'Steht im Postfach vor dem Betreff, damit eine Testmail nicht mit einer echten verwechselt wird. Leer heißt: der Betreff kommt an, wie ihn ein Empfänger sähe — sinnvoll, wenn geprüft werden soll, was auf einem Handy noch von der Zeile übrig bleibt.',
+        ],
+
+        'core_mails_enabled' => [
+            'label' => 'Konto-Mails aus Vorlagen verschicken',
+            'description' => 'Aus heißt: Statamic und Laravel verschicken ihre eigenen Texte, auch wenn es Vorlagen gibt.',
         ],
 
         'countdown_image' => [

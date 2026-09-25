@@ -4,6 +4,7 @@ namespace Goldnead\EmailTemplates\Support;
 
 use Goldnead\BrandContext\Contracts\SenderIdentityResolver;
 use Goldnead\BrandContext\Facades\BrandContext;
+use Goldnead\EmailTemplates\Registry\TemplateRegistry;
 
 /**
  * Merge-variable substitution for email templates.
@@ -64,6 +65,22 @@ class MergeVariables
         return is_array($configured) && $configured !== []
             ? array_replace_recursive($builtin, $configured)
             : $builtin;
+    }
+
+    /**
+     * Sample data for one template: the defaults, with the examples its
+     * sending addon registered for its placeholders on top. So the Live
+     * Preview of a password reset shows a link, not `{{ url }}`.
+     *
+     * @return array<string,mixed>
+     */
+    public static function sampleDataFor(?string $slug): array
+    {
+        $examples = $slug !== null && $slug !== ''
+            ? app(TemplateRegistry::class)->examples($slug)
+            : [];
+
+        return self::sampleData($examples);
     }
 
     /**

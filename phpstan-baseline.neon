@@ -1,12 +1,6 @@
 parameters:
 	ignoreErrors:
 		-
-			message: '#^Instanceof between Goldnead\\EmailTemplates\\Contracts\\EmailTemplateSource and Goldnead\\EmailTemplates\\Contracts\\EmailTemplateSource will always evaluate to true\.$#'
-			identifier: instanceof.alwaysTrue
-			count: 1
-			path: src/Console/ImportEmailTemplatesCommand.php
-
-		-
 			message: '#^Instanceof between Goldnead\\EmailTemplates\\Support\\EmailTemplateData and Goldnead\\EmailTemplates\\Support\\EmailTemplateData will always evaluate to true\.$#'
 			identifier: instanceof.alwaysTrue
 			count: 1

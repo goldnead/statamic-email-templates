@@ -204,7 +204,7 @@ class SendTestEmail extends Action
     protected function send(EmailTemplateResolver $resolver, Entry $entry, string $recipient): void
     {
         $template = $resolver->forEntry($entry);
-        $sample = MergeVariables::sampleData();
+        $sample = MergeVariables::sampleDataFor((string) $entry->slug());
 
         // Only the body is HTML. The subject and the plain-text part are not,
         // and escaping them would put a literal `&amp;` in front of the reader.

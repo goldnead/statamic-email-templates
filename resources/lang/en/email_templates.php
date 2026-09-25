@@ -20,6 +20,10 @@ return [
     'field_brand_instructions' => 'Which brand this template belongs to. A template is only found by the brand it is filed under, so two brands can each have their own template under the same slug.',
     'field_description' => 'Description',
     'field_description_instructions' => 'Internal note. Not sent to recipients.',
+    'field_sent_on' => 'Sent on',
+    'field_sent_on_instructions' => 'Which addon sends this template, and on which occasion. Empty means no installed addon claims it; it is only sent when your own code asks for it.',
+    'field_placeholders' => 'Placeholders',
+    'field_placeholders_instructions' => 'The sender fills these in at send time. Live Preview and the test email use sample values.',
     'live_preview_target' => 'Email',
     'live_preview_empty' => 'No live preview available. Open the preview while editing a template.',
 

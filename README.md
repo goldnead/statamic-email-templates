@@ -238,6 +238,7 @@ adds no permission of its own.
 | `preview.sample_data` | see above | Deep-merged over the built-in merge-variable sample set. |
 | `test_send.subject_prefix` | `'[Test] '` | Put in front of the subject of a test send, so a test is recognisable in an inbox that also holds real mail. Empty string sends the subject exactly as a recipient would see it. |
 | `snapshots.enabled` | `true` | Whether a send is recorded — see [Send snapshots](#send-snapshots). `false` stops recording; rows already written stay readable. |
+| `core_mails.enabled` | `false` | Send Statamic's and Laravel's account mails from templates — see [Core account mails](#core-account-mails). |
 
 Layout resolution for an entry: its own `layout`, else `default_layout`, else
 `branded_layout`. An unknown handle or a missing view falls through the chain —
@@ -245,9 +246,10 @@ nothing throws mid-send.
 
 ### Settings screen
 
-With `goldnead/statamic-brand-context` installed, five of these keys are editable
+With `goldnead/statamic-brand-context` installed, six of these keys are editable
 per brand under **Control Panel → Settings**: `branded_layout`, `default_layout`,
-`snapshots.enabled`, `test_send.subject_prefix` and `countdown.image`. Only keys
+`snapshots.enabled`, `test_send.subject_prefix`, `countdown.image` and
+`core_mails.enabled`. Only keys
 somebody actually changed are stored; everything else keeps following the config
 file, so upgrading the package still moves the defaults.
 
@@ -353,6 +355,7 @@ php artisan email-templates:import
 | `--dry-run` | Report what would happen, write nothing |
 | `--overwrite` | Replace entries whose slug already exists (default: skip) |
 | `--source=` | Only import from the source with this label |
+| `--locale=` | Language of the shipped default texts (`de`, `en`); default is the app locale |
 
 ### Contributing an import source
 
@@ -363,6 +366,92 @@ use Goldnead\EmailTemplates\Contracts\EmailTemplateSource;
 
 $this->app->tag([MySource::class], 'email-templates.sources');
 ```
+
+A tagged source only feeds the import. To also tell editors *when* a mail goes out,
+register it (next section); a registered default is imported the same way.
+
+## Registering an addon's mails
+
+An addon that sends mail announces each template once, in its provider's `boot()`:
+
+```php
+if (app()->bound('email-templates.registry')) {
+    app('email-templates.registry')->register([
+        'slug' => 'teams-invitation',              // what the addon resolves
+        'addon' => 'Teams',                        // who sends it
+        'trigger' => fn () => __('teams::mail.invitation.trigger'), // on which occasion
+        'event' => \Goldnead\Teams\Events\InvitationSent::class,    // optional
+        'placeholders' => [
+            'team.name' => ['label' => 'Name of the team', 'example' => 'Sopranos'],
+            'url' => 'Link to accept the invitation',
+        ],
+        'defaults' => fn () => [
+            'title' => 'Team invitation',
+            'subject' => 'Join {{ team.name }}',
+            'preview' => '…',
+            'body' => '<p>…<a href="{{ url }}">Accept</a></p>',
+        ],
+    ]);
+}
+```
+
+Plain arrays and closures only, so the addon needs no class from this package and
+keeps it a `suggest`. Closures are called when read, in the locale of the request
+that reads them. The facade `Goldnead\EmailTemplates\Facades\EmailTemplateRegistry`
+offers the same methods (`register`, `find`, `all`, `byAddon`, `describe`, `examples`).
+
+What registering buys:
+
+- **"Sent on" in the listing and on the edit form**: `Jemand wird in ein Team eingeladen (Teams)`.
+  A template no addon claims shows nothing there; one that only comes from a tagged
+  import source shows the source's label.
+- **The placeholder list** on the edit form's sidebar.
+- **Examples in Live Preview and the test send**, so a preview shows a link, not `{{ url }}`.
+- **`email-templates:import`** writes the `defaults` (`--source=<addon>`).
+
+Both extra fields are added to the blueprint in memory on Control Panel requests,
+the way core adds its `site` column. Nothing is written into the site's blueprint file.
+
+## Core account mails
+
+Statamic and Laravel send a few account mails of their own. With
+`core_mails.enabled` on, each is sent from the template with its slug instead:
+
+| Slug | Replaces | Sent when |
+|---|---|---|
+| `core-password-reset` | `Statamic\Notifications\PasswordReset`, `Illuminate\Auth\Notifications\ResetPassword` | Someone asks for a new password on the website |
+| `core-password-reset-cp` | `Statamic\Notifications\PasswordReset` from the CP login screen | Someone asks for a new password on the CP login screen |
+| `core-activate-account` | `Statamic\Notifications\ActivateAccount` | A new account's activation / invitation goes out |
+| `core-verification-code` | `Statamic\Notifications\ElevatedSessionVerificationCode` | Someone has to confirm who they are (elevated session) without a two-factor app |
+| `core-verify-email` | `Illuminate\Auth\Notifications\VerifyEmail` | A `MustVerifyEmail` account confirms its address |
+
+Placeholders: `{{ url }}`, `{{ user.name }}` (the address when there is no name),
+`{{ user.email }}`, `{{ site_name }}`, `{{ expires_in }}` ("1 hour"),
+`{{ expires_minutes }}`; `{{ message }}` for the activation (the text an admin typed
+into the CP's invite form), `{{ code }}` for the verification code. An invitation
+subject typed in the CP beats the template's subject.
+
+Nothing changes unless **all** of these hold: the setting is on, the template exists
+and it is **published**. A draft is how you prepare a mail without it going live.
+If a template fails to render, the core mail goes out and a warning is logged.
+
+The link is computed by the code core uses, so `PasswordReset::resetFormUrl()`,
+`ResetPassword::createUrlUsing()`, `VerifyEmail::createUrlUsing()`, the CP's own
+reset form and a `web`/`cp` broker split in `statamic.users.passwords` keep working.
+Statamic's Eloquent users hand the reset to the model when it defines
+`sendPasswordResetNotification()` (Laravel's `CanResetPassword` does); that sends
+Laravel's `ResetPassword`, which is covered too.
+
+How: a `NotificationSending` listener renders the template, sends it as
+`Goldnead\EmailTemplates\CoreMails\TemplatedCoreMail` (its `replaces` property names
+the original class) and cancels the original on the mail channel.
+
+```
+php please email-templates:import --source=Statamic --locale=de
+```
+
+writes German defaults for all five (`--locale=en` for English). A plain
+`email-templates:import` leaves them out while the setting is off.
 
 ## How Bard becomes email HTML
 

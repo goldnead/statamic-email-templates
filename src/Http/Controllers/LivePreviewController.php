@@ -76,7 +76,7 @@ class LivePreviewController extends Controller
     /** The render itself, split out so it can run inside a brand. */
     protected function render(mixed $entry): Response
     {
-        $sample = MergeVariables::sampleData();
+        $sample = MergeVariables::sampleDataFor(method_exists($entry, 'slug') ? (string) $entry->slug() : null);
 
         // Only the body is HTML. The subject is escaped once on its way into
         // this page's markup (`$this->e()`), and the preheader once inside

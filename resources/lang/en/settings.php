@@ -28,6 +28,11 @@ return [
             'description' => 'The test email offered next to Save in the Control Panel. It takes the same path as a real send, only to an address typed in by hand.',
         ],
 
+        'core_mails' => [
+            'title' => 'Account mails from Statamic and Laravel',
+            'description' => 'Password reset (website and Control Panel), account activation, verification code and email verification. When on, each of these mails is sent from the published template with its slug (core-password-reset, core-password-reset-cp, core-activate-account, core-verification-code, core-verify-email). Without that template, or while it is a draft, Statamic sends its own mail unchanged. `php please email-templates:import --source=Statamic --locale=en` creates the shipped templates.',
+        ],
+
         'countdown' => [
             'title' => 'Countdown',
             'description' => 'The image countdown, which serves the remaining time as a PNG. The text countdown needs none of this and always works.',
@@ -55,6 +60,11 @@ return [
         'test_send_subject_prefix' => [
             'label' => 'Test email subject prefix',
             'description' => 'Sits in front of the subject in the inbox so a test email is not mistaken for a real one. Empty means the subject arrives exactly as a recipient would see it — worth doing when checking what is left of the line on a phone.',
+        ],
+
+        'core_mails_enabled' => [
+            'label' => 'Send account mails from templates',
+            'description' => 'Off means Statamic and Laravel send their own texts, even where a template exists.',
         ],
 
         'countdown_image' => [
