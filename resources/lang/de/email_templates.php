@@ -21,6 +21,8 @@ return [
     'field_description' => 'Beschreibung',
     'field_description_instructions' => 'Interne Notiz. Wird nicht an Empfänger gesendet.',
     'field_sent_on' => 'Verschickt bei',
+    'core_mail_blocked' => 'Wirkt nicht: die Anwendung baut diese Mail selbst (:class::toMailUsing) und liefert keinen Knopf mit dem Link. Es geht ihre Mail raus, nicht diese Vorlage.',
+    'core_mail_blocked_short' => 'wirkt nicht, Anwendung baut die Mail selbst',
     'field_sent_on_none' => 'Kein installiertes Addon meldet diese Vorlage an. Verschickt wird sie nur, wenn eigener Code sie aufruft.',
     'field_subject_instructions_registered' => 'Die Betreffzeile der E-Mail. Platzhalter wie :example, alle stehen rechts unter „Platzhalter“.',
     'field_preview_instructions_registered' => 'Preheader: kurzer Vorschautext, den Mail-Clients neben dem Betreff anzeigen. Platzhalter wie :example.',

@@ -79,12 +79,19 @@ class SendCoreMailsFromTemplates
 
         Notification::sendNow($event->notifiable, $mail, ['mail']);
 
-        CoreMailReplaced::dispatch(
-            $match['slug'],
-            $event->notification::class,
-            $event->notifiable,
-            (string) ($match['variables']['user']['email'] ?? ''),
-        );
+        // The mail is out. A listener failing now must not turn that into an
+        // error page, nor into a retried queue job that sends it twice, and
+        // the `false` below must still reach Laravel or core sends as well.
+        try {
+            CoreMailReplaced::dispatch(
+                $match['slug'],
+                $event->notification::class,
+                $event->notifiable,
+                (string) ($match['variables']['user']['email'] ?? ''),
+            );
+        } catch (Throwable $e) {
+            report($e);
+        }
 
         return false;
     }

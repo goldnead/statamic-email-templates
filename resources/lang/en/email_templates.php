@@ -21,6 +21,8 @@ return [
     'field_description' => 'Description',
     'field_description_instructions' => 'Internal note. Not sent to recipients.',
     'field_sent_on' => 'Sent on',
+    'core_mail_blocked' => 'Not in effect: the application builds this mail itself (:class::toMailUsing) and returns no button with the link. Its mail goes out, not this template.',
+    'core_mail_blocked_short' => 'not in effect, the app builds the mail itself',
     'field_sent_on_none' => 'No installed addon claims this template. It is only sent when your own code asks for it.',
     'field_subject_instructions_registered' => 'The email subject line. Placeholders such as :example; all of them are listed under "Placeholders".',
     'field_preview_instructions_registered' => 'Preheader: short preview text mail clients show next to the subject. Placeholders such as :example.',

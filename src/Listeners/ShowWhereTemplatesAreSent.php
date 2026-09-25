@@ -2,9 +2,11 @@
 
 namespace Goldnead\EmailTemplates\Listeners;
 
+use Goldnead\EmailTemplates\CoreMails\CoreMails;
 use Goldnead\EmailTemplates\Registry\TemplateRegistry;
 use Goldnead\EmailTemplates\Services\EmailTemplateCollectionManager;
 use Statamic\Events\EntryBlueprintFound;
+use Statamic\Fields\Blueprint;
 use Statamic\Statamic;
 
 /**
@@ -27,7 +29,10 @@ class ShowWhereTemplatesAreSent
 
     public const PLACEHOLDERS_FIELD = 'template_placeholders';
 
-    public function __construct(protected TemplateRegistry $registry) {}
+    public function __construct(
+        protected TemplateRegistry $registry,
+        protected CoreMails $coreMails,
+    ) {}
 
     public function handle(EntryBlueprintFound $event): void
     {
@@ -40,9 +45,23 @@ class ShowWhereTemplatesAreSent
         }
 
         $slug = $event->entry?->slug();
+        $route = (string) optional(request()->route())->getName();
+        $isListing = in_array($route, ['statamic.cp.collections.show', 'statamic.cp.collections.entries.index'], true);
 
-        // The listing: no entry, one column fed by the computed value.
-        if (! is_string($slug)) {
+        // The blueprint object is one instance per process. The edit form
+        // fires this event twice on it, once for the entry and once without
+        // (core's own lookups), and a listing after a form in the same process
+        // (Octane, tests) meets the form's fields. So the route decides what
+        // the fields are, and a lookup without entry on a form route leaves
+        // them alone.
+        if (! $isListing && ! is_string($slug)) {
+            return;
+        }
+
+        $this->withoutOwnFields($event->blueprint);
+
+        // The listing: one column fed by the computed value.
+        if ($isListing) {
             $event->blueprint->ensureField(self::FIELD, [
                 'type' => 'text',
                 'display' => __('email-templates::email_templates.field_sent_on'),
@@ -57,13 +76,17 @@ class ShowWhereTemplatesAreSent
         // The edit form: plain text, not an input. Nothing here can be
         // edited, and a greyed-out input box says the opposite.
         $sentOn = $this->registry->describe($slug);
+        $blockedBy = $this->coreMails->blockedBy($slug);
 
         $event->blueprint->ensureField(self::FIELD, [
             'type' => 'html',
             'display' => __('email-templates::email_templates.field_sent_on'),
-            'html' => $sentOn !== null
+            'html' => ($sentOn !== null
                 ? '<p style="margin:0">'.e($sentOn).'</p>'
-                : '<p style="margin:0;opacity:.75">'.e(__('email-templates::email_templates.field_sent_on_none')).'</p>',
+                : '<p style="margin:0;opacity:.75">'.e(__('email-templates::email_templates.field_sent_on_none')).'</p>')
+                .($blockedBy !== null
+                    ? '<p style="margin:8px 0 0;color:#b45309">'.e(__('email-templates::email_templates.core_mail_blocked', ['class' => $blockedBy])).'</p>'
+                    : ''),
             'visibility' => 'computed',
             'listable' => false,
             'localizable' => false,
@@ -96,6 +119,20 @@ class ShowWhereTemplatesAreSent
             'listable' => false,
             'localizable' => false,
         ], 'sidebar');
+    }
+
+    protected function withoutOwnFields(Blueprint $blueprint): void
+    {
+        // `ensureField()` keeps its fields in a list of its own and ignores a
+        // second call for the same handle, so dropping them from that list is
+        // what lets this request decide. Core has no public method for it.
+        (function (array $handles) {
+            foreach ($handles as $handle) {
+                unset($this->ensuredFields[$handle]);
+            }
+
+            $this->resetBlueprintCache()->resetFieldsCache();
+        })->call($blueprint, [self::FIELD, self::PLACEHOLDERS_FIELD]);
     }
 
     /**

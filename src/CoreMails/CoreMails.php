@@ -7,12 +7,14 @@ use Goldnead\EmailTemplates\Listeners\SendCoreMailsFromTemplates;
 use Goldnead\EmailTemplates\Registry\TemplateRegistry;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Auth\Notifications\VerifyEmail;
+use Illuminate\Notifications\AnonymousNotifiable;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use ReflectionClass;
 use ReflectionMethod;
 use Statamic\Auth\Passwords\PasswordReset as PasswordResetManager;
 use Statamic\Auth\User as StatamicUser;
+use Statamic\Facades\User;
 use Statamic\Notifications\ActivateAccount;
 use Statamic\Notifications\ElevatedSessionVerificationCode;
 use Statamic\Notifications\PasswordReset;
@@ -189,7 +191,7 @@ class CoreMails
             $url = (string) $this->callProtected($notification, 'verificationUrl', $notifiable);
 
             if (VerifyEmail::$toMailCallback) {
-                $url = $this->actionUrlOf(call_user_func(VerifyEmail::$toMailCallback, $notifiable, $url));
+                $url = $this->verifyLinkOf(call_user_func(VerifyEmail::$toMailCallback, $notifiable, $url), $url);
 
                 if ($url === null) {
                     return null;
@@ -231,11 +233,89 @@ class CoreMails
      */
     protected function laravelResetUrl(ResetPassword $notification, mixed $notifiable): ?string
     {
-        if (ResetPassword::$toMailCallback && ! ResetPassword::$createUrlCallback) {
-            return $this->actionUrlOf(call_user_func(ResetPassword::$toMailCallback, $notifiable, $notification->token));
+        // Laravel's own order: with toMailUsing() set, createUrlUsing() is
+        // never asked (`ResetPassword::toMail()`), so it is not asked here.
+        if (ResetPassword::$toMailCallback) {
+            return $this->resetLinkOf(call_user_func(ResetPassword::$toMailCallback, $notifiable, $notification->token), $notification->token);
         }
 
         return (string) $this->callProtected($notification, 'resetUrl', $notifiable);
+    }
+
+    /**
+     * The host button as a reset link, but only if it can be one: the token
+     * must be in it. A "back to the homepage" button next to a link in the
+     * text is not the reset link.
+     */
+    protected function resetLinkOf(mixed $message, string $token): ?string
+    {
+        $url = $this->actionUrlOf($message);
+
+        return $url !== null && $token !== '' && str_contains($url, $token) ? $url : null;
+    }
+
+    /**
+     * The host button as a verification link, but only if it is signed or
+     * the very URL core computed.
+     */
+    protected function verifyLinkOf(mixed $message, string $coreUrl): ?string
+    {
+        $url = $this->actionUrlOf($message);
+
+        return $url !== null && ($url === $coreUrl || str_contains($url, 'signature=')) ? $url : null;
+    }
+
+    /**
+     * A warning when a host `toMailUsing()` keeps this template from ever
+     * being used, or null. Asked by the Control Panel, not by a send.
+     *
+     * The callback is called with the viewing user and a sample token or
+     * link, the same way the send would call it. A callback that returns a
+     * Mailable, a MailMessage without a usable button, or throws, means every
+     * real mail goes out as the host built it.
+     */
+    public function blockedBy(string $slug): ?string
+    {
+        if (array_key_exists($slug, $this->blocked)) {
+            return $this->blocked[$slug];
+        }
+
+        [$class, $callback] = match ($slug) {
+            self::PASSWORD_RESET, self::PASSWORD_RESET_CP => [ResetPassword::class, ResetPassword::$toMailCallback],
+            self::VERIFY_EMAIL => [VerifyEmail::class, VerifyEmail::$toMailCallback],
+            default => [null, null],
+        };
+
+        if ($callback === null) {
+            return $this->blocked[$slug] = null;
+        }
+
+        $notifiable = $this->probeNotifiable();
+
+        try {
+            $ok = $class === ResetPassword::class
+                ? $this->resetLinkOf(call_user_func($callback, $notifiable, 'probe-token-123'), 'probe-token-123') !== null
+                : $this->verifyLinkOf(call_user_func($callback, $notifiable, $probe = url('/email/verify/1/probe?expires=1&signature=probe')), $probe) !== null;
+        } catch (Throwable) {
+            $ok = false;
+        }
+
+        return $this->blocked[$slug] = $ok ? null : class_basename($class);
+    }
+
+    /** @var array<string, string|null> */
+    protected array $blocked = [];
+
+    /** The viewing user as the host's model when there is one. */
+    protected function probeNotifiable(): mixed
+    {
+        $user = User::current();
+
+        if ($user !== null && method_exists($user, 'model') && is_object($user->model())) {
+            return $user->model();
+        }
+
+        return $user ?? new AnonymousNotifiable;
     }
 
     protected function actionUrlOf(mixed $message): ?string

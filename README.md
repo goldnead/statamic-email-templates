@@ -446,14 +446,24 @@ How: a `NotificationSending` listener renders the template, sends it as
 `Goldnead\EmailTemplates\CoreMails\TemplatedCoreMail` (its `replaces` property names
 the original class) and cancels the original on the mail channel.
 
-**A host's `toMailUsing()`.** When `ResetPassword::toMailUsing()` is set and
-`createUrlUsing()` is not, core never asks for `resetUrl()` (and the host often has
-no `password.reset` route). The callback is called and the button link of the
-`MailMessage` it returns (`actionUrl`) becomes `{{ url }}`. A result without a
-button link, or anything other than a `MailMessage`, leaves the host's mail
-untouched. `VerifyEmail::toMailUsing()` is handled the same way. Any error while
-building the template mail, a link that cannot be computed included, sends the
-core mail and logs a warning.
+**A host's `toMailUsing()`.** Once `ResetPassword::toMailUsing()` is set, Laravel
+builds the mail from the callback and never asks `createUrlUsing()` or
+`resetUrl()` (the host often has no `password.reset` route). This addon follows
+that order: the callback is called and the button link of the `MailMessage` it
+returns (`actionUrl`) becomes `{{ url }}`, but only when the reset token is in
+it. For `VerifyEmail::toMailUsing()` the button link is taken when it is signed
+(`signature=`) or equals the link core computed. Anything else (a Mailable, a
+`MailMessage` without a button, a button that points somewhere else) leaves the
+host's mail untouched. Any error while building the template mail, a link that
+cannot be computed included, sends the core mail and logs a warning.
+
+**The host callback runs twice** when the template does not take over: once here to
+find the link, once by Laravel to build the mail that goes out. A callback with
+side effects (logging, counting) sees both calls.
+
+The template's edit form and the listing say when a host `toMailUsing()` keeps a
+template from taking effect ("Not in effect: the application builds this mail
+itself"). The check calls the callback with the viewing user and a sample token.
 
 **CP resets for Eloquent users.** Statamic's Eloquent user hands a reset to the
 model, which sends Laravel's `ResetPassword`. A reset started on the CP login screen
@@ -473,6 +483,8 @@ so for a replaced mail:
   `slug`, `originalClass`, `notifiable` and `recipient` (the address). No token
   and no link. Listen to it to log or forward account mails. This addon ships no
   Webhook-Manager or Automations bridge; an app that wants one listens to this event.
+  A listener that throws is reported (`report()`) and does not fail the send: the
+  mail is already out, and a failed queue job would send it again on retry.
 
 ```
 php please email-templates:import --source=Statamic --locale=de

@@ -23,7 +23,10 @@ published template the core mail goes out unchanged. German and English defaults
 with the package. Any error while building the template mail sends the core mail. A
 host's `toMailUsing()` is respected (its button link is used, or its mail is left
 alone). A CP reset by an Eloquent user uses the CP template. Every replacement fires
-`CoreMailReplaced`.
+`CoreMailReplaced`; a listener that throws is reported, not raised. A host button is
+only taken as the link when it can be one (reset: carries the token; verify: signed
+or the core link). The CP says when a host `toMailUsing()` keeps a template from
+taking effect.
 
 ### Changed
 

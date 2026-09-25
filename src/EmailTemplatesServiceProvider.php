@@ -209,7 +209,18 @@ class EmailTemplatesServiceProvider extends AddonServiceProvider
         Collection::computed(
             EmailTemplateCollectionManager::HANDLE,
             ShowWhereTemplatesAreSent::FIELD,
-            fn ($entry) => $this->app->make(TemplateRegistry::class)->describe((string) $entry->slug()),
+            function ($entry) {
+                $slug = (string) $entry->slug();
+                $sentOn = $this->app->make(TemplateRegistry::class)->describe($slug);
+
+                // A host toMailUsing() that keeps the template from ever
+                // being sent is said in the list, not only on the form.
+                if ($sentOn !== null && $this->app->make(CoreMails::class)->blockedBy($slug) !== null) {
+                    $sentOn .= ' · '.__('email-templates::email_templates.core_mail_blocked_short');
+                }
+
+                return $sentOn;
+            },
         );
     }
 

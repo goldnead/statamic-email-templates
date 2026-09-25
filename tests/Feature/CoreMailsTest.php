@@ -8,10 +8,12 @@ use Goldnead\EmailTemplates\Services\EmailTemplateCollectionManager;
 use Goldnead\EmailTemplates\Support\EmailTemplateData;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Auth\Notifications\VerifyEmail;
+use Illuminate\Mail\Mailable;
 use Illuminate\Notifications\Events\NotificationSent;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Exceptions;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Route;
@@ -311,11 +313,125 @@ it('takes the verification link from a host VerifyEmail::toMailUsing() callback'
     coreTemplate(CoreMails::VERIFY_EMAIL, ['subject' => 'Bestätigen', 'body' => '<p><a href="{{ url }}">Los</a></p>']);
     // Core asks for the link before the callback, so the test app needs one.
     VerifyEmail::createUrlUsing(fn () => 'https://example.com/verify/core');
-    VerifyEmail::toMailUsing(fn ($user, string $url) => (new MailMessage)->subject('Host')->action('Los', 'https://host.example.com/v/1'));
+    VerifyEmail::toMailUsing(fn ($user, string $url) => (new MailMessage)->subject('Host')->action('Los', 'https://host.example.com/v/1?expires=9&signature=abc'));
 
     Notification::sendNow(new CoreMailsHostUser('host@example.com'), new VerifyEmail);
 
-    expect(coreMailsSent()[0]->getHtmlBody())->toContain('https://host.example.com/v/1');
+    expect(coreMailsSent()[0]->getHtmlBody())->toContain('https://host.example.com/v/1?expires=9&amp;signature=abc');
+});
+
+it('takes the core verification link when the host button carries exactly that', function () {
+    coreTemplate(CoreMails::VERIFY_EMAIL, ['subject' => 'Bestätigen', 'body' => '<p><a href="{{ url }}">Los</a></p>']);
+    VerifyEmail::createUrlUsing(fn () => 'https://example.com/verify/core');
+    VerifyEmail::toMailUsing(fn ($user, string $url) => (new MailMessage)->action('Los', $url));
+
+    Notification::sendNow(new CoreMailsHostUser('host@example.com'), new VerifyEmail);
+
+    expect(coreMailsSent()[0]->getSubject())->toBe('Bestätigen');
+});
+
+/*
+ * Review round 2. A button is only trusted as "the link" when it can be the
+ * link: the reset token is in it, or the verification URL is signed or the
+ * one core computed. A "Zur Startseite" button would otherwise become the
+ * password reset link of the template.
+ */
+it('leaves the host mail alone when its reset button does not carry the token', function () {
+    coreTemplate(CoreMails::PASSWORD_RESET);
+    ResetPassword::toMailUsing(fn ($u, $t) => (new MailMessage)
+        ->subject('Host-Mail')
+        ->line('Dein Link: https://host.example.com/pw/'.$t)
+        ->action('Zur Startseite', 'https://host.example.com/'));
+
+    Notification::sendNow(new CoreMailsHostUser('h@example.com', 'H'), new ResetPassword('p2'));
+
+    expect(coreMailsSent())->toHaveCount(1)
+        ->and(coreMailsSent()[0]->getSubject())->toBe('Host-Mail');
+});
+
+it('leaves the host mail alone when its verification button is neither signed nor the core link', function () {
+    coreTemplate(CoreMails::VERIFY_EMAIL, ['subject' => 'Bestätigen']);
+    VerifyEmail::createUrlUsing(fn () => 'https://example.com/verify/core?signature=x');
+    VerifyEmail::toMailUsing(fn ($user, string $url) => (new MailMessage)->subject('Host-Verify')->action('Home', 'https://host.example.com/'));
+
+    Notification::sendNow(new CoreMailsHostUser('host@example.com'), new VerifyEmail);
+
+    expect(coreMailsSent()[0]->getSubject())->toBe('Host-Verify');
+});
+
+/* Laravel ignores createUrlUsing() once toMailUsing() is set; so does this. */
+it('follows the toMailUsing() link even when createUrlUsing() is set too', function () {
+    coreTemplate(CoreMails::PASSWORD_RESET);
+    ResetPassword::createUrlUsing(fn ($u, $t) => 'https://create.example.com/'.$t);
+    ResetPassword::toMailUsing(fn ($u, $t) => (new MailMessage)->action('Reset', 'https://callback.example.com/'.$t));
+
+    Notification::sendNow(new CoreMailsHostUser('h@example.com', 'H'), new ResetPassword('p1'));
+
+    $html = coreMailsSent()[0]->getHtmlBody();
+    expect($html)->toContain('https://callback.example.com/p1')
+        ->and($html)->not->toContain('create.example.com');
+});
+
+it('runs a failing host callback twice and then fails exactly like core', function () {
+    coreTemplate(CoreMails::PASSWORD_RESET);
+    $calls = 0;
+    ResetPassword::toMailUsing(function () use (&$calls) {
+        $calls++;
+        throw new RuntimeException('host kaputt');
+    });
+
+    expect(fn () => Notification::sendNow(new CoreMailsHostUser('h@example.com', 'H'), new ResetPassword('p3')))
+        ->toThrow(RuntimeException::class, 'host kaputt');
+    expect($calls)->toBe(2)
+        ->and(coreMailsSent())->toHaveCount(0);
+});
+
+it('does not let a failing CoreMailReplaced listener undo or repeat the send', function () {
+    Exceptions::fake();
+    coreTemplate(CoreMails::PASSWORD_RESET);
+    Event::listen(CoreMailReplaced::class, fn () => throw new RuntimeException('log-service down'));
+
+    statamicUser()->sendPasswordResetNotification('p6');
+
+    expect(coreMailsSent())->toHaveCount(1);
+    Exceptions::assertReported(fn (RuntimeException $e) => $e->getMessage() === 'log-service down');
+});
+
+it('warns on the template when a host toMailUsing() keeps it from taking effect', function () {
+    $this->actingAsSuperUser();
+    [$entry] = app(EmailTemplateCollectionManager::class)->upsert(new EmailTemplateData(slug: CoreMails::PASSWORD_RESET, title: 'Reset'));
+    ResetPassword::toMailUsing(fn ($u, $t) => (new Mailable)->html('<a href="x">x</a>'));
+
+    $notice = __('email-templates::email_templates.core_mail_blocked', ['class' => 'ResetPassword']);
+
+    $html = html_entity_decode($this->get(cp_route('collections.entries.edit', [EmailTemplateCollectionManager::HANDLE, $entry->id()]))->getContent());
+    expect($html)->toContain($notice);
+});
+
+/*
+ * One request per test: the CP's blueprint caches (Blink, the blueprint
+ * repository) live as long as the container, which in production is one
+ * request and in a test the whole test.
+ */
+it('says so in the listing too', function () {
+    $this->actingAsSuperUser();
+    app(EmailTemplateCollectionManager::class)->upsert(new EmailTemplateData(slug: CoreMails::PASSWORD_RESET, title: 'Reset'));
+    ResetPassword::toMailUsing(fn ($u, $t) => (new Mailable)->html('<a href="x">x</a>'));
+
+    $rows = collect($this->getJson(cp_route('collections.entries.index', EmailTemplateCollectionManager::HANDLE).'?columns=title,sent_on')->json('data'))->keyBy('title');
+
+    expect($rows['Reset']['sent_on'])->toContain(__('email-templates::email_templates.core_mail_blocked_short'));
+});
+
+it('does not warn when the host callback returns a button with the token', function () {
+    $this->actingAsSuperUser();
+    [$entry] = app(EmailTemplateCollectionManager::class)->upsert(new EmailTemplateData(slug: CoreMails::PASSWORD_RESET, title: 'Reset'));
+    ResetPassword::toMailUsing(fn ($u, $t) => (new MailMessage)->action('Reset', 'https://h.example.com/'.$t));
+
+    $html = html_entity_decode($this->get(cp_route('collections.entries.edit', [EmailTemplateCollectionManager::HANDLE, $entry->id()]))->getContent());
+
+    expect($html)->not->toContain(__('email-templates::email_templates.core_mail_blocked', ['class' => 'ResetPassword']))
+        ->and($html)->toContain('"handle":"sent_on"');
 });
 
 it('sends the core mail when working out the template values fails', function () {
