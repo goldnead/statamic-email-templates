@@ -35,7 +35,7 @@ return [
 
     'activate_account' => [
         'title' => 'Konto aktivieren (Einladung)',
-        'trigger' => 'Neues Konto angelegt, Einladung zum Aktivieren',
+        'trigger' => 'Einladung zum Aktivieren eines Kontos',
         'subject' => 'Dein Konto bei {{ site_name }}',
         'preview' => 'Leg dein Passwort fest, dann ist dein Konto bereit.',
         'body' => '<p>Hallo {{ user.name }},</p>'
@@ -58,7 +58,7 @@ return [
 
     'verify_email' => [
         'title' => 'E-Mail-Adresse bestätigen',
-        'trigger' => 'Neues Konto bestätigt seine Adresse (Laravel)',
+        'trigger' => 'Neues Konto bestätigt seine Adresse',
         'subject' => 'Bestätige deine E-Mail-Adresse für {{ site_name }}',
         'preview' => 'Ein Klick, dann ist dein Konto freigeschaltet.',
         'body' => '<p>Hallo {{ user.name }},</p>'

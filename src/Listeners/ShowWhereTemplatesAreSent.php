@@ -39,21 +39,52 @@ class ShowWhereTemplatesAreSent
             return;
         }
 
-        // A textarea, not a text input: read-only, a single-line input cut
-        // "Statamic: Passwort vergessen auf der Website" off in the sidebar.
+        $slug = $event->entry?->slug();
+
+        // The listing: no entry, one column fed by the computed value.
+        if (! is_string($slug)) {
+            $event->blueprint->ensureField(self::FIELD, [
+                'type' => 'text',
+                'display' => __('email-templates::email_templates.field_sent_on'),
+                'visibility' => 'computed',
+                'listable' => true,
+                'localizable' => false,
+            ], 'sidebar');
+
+            return;
+        }
+
+        // The edit form: plain text, not an input. Nothing here can be
+        // edited, and a greyed-out input box says the opposite.
+        $sentOn = $this->registry->describe($slug);
+
         $event->blueprint->ensureField(self::FIELD, [
-            'type' => 'textarea',
+            'type' => 'html',
             'display' => __('email-templates::email_templates.field_sent_on'),
-            'instructions' => __('email-templates::email_templates.field_sent_on_instructions'),
+            'html' => $sentOn !== null
+                ? '<p style="margin:0">'.e($sentOn).'</p>'
+                : '<p style="margin:0;opacity:.75">'.e(__('email-templates::email_templates.field_sent_on_none')).'</p>',
             'visibility' => 'computed',
-            'listable' => true,
+            'listable' => false,
             'localizable' => false,
         ], 'sidebar');
 
-        $slug = $event->entry?->slug();
-
-        if (! is_string($slug) || ($definition = $this->registry->find($slug)) === null || $definition->placeholders() === []) {
+        if (($definition = $this->registry->find($slug)) === null || $definition->placeholders() === []) {
             return;
+        }
+
+        // The generic help text names `{{ contact.first_name }}`, which a
+        // registered sender never fills. Point at the template's own tags.
+        // A name reads better as the example in a subject line than a link.
+        $keys = array_keys($definition->placeholders());
+        $example = '{{ '.(in_array('user.name', $keys, true) ? 'user.name' : $keys[0]).' }}';
+
+        foreach (['subject', 'preview'] as $handle) {
+            if ($event->blueprint->hasField($handle)) {
+                $event->blueprint->ensureFieldHasConfig($handle, [
+                    'instructions' => __("email-templates::email_templates.field_{$handle}_instructions_registered", ['example' => $example]),
+                ]);
+            }
         }
 
         $event->blueprint->ensureField(self::PLACEHOLDERS_FIELD, [
@@ -61,6 +92,7 @@ class ShowWhereTemplatesAreSent
             'display' => __('email-templates::email_templates.field_placeholders'),
             'instructions' => __('email-templates::email_templates.field_placeholders_instructions'),
             'html' => $this->placeholderTable($definition->placeholders()),
+            'visibility' => 'computed',
             'listable' => false,
             'localizable' => false,
         ], 'sidebar');

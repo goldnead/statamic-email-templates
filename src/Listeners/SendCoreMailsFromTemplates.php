@@ -2,6 +2,7 @@
 
 namespace Goldnead\EmailTemplates\Listeners;
 
+use Goldnead\EmailTemplates\CoreMails\CoreMailReplaced;
 use Goldnead\EmailTemplates\CoreMails\CoreMails;
 use Goldnead\EmailTemplates\CoreMails\TemplatedCoreMail;
 use Goldnead\EmailTemplates\Services\EmailTemplateCollectionManager;
@@ -50,17 +51,22 @@ class SendCoreMailsFromTemplates
             return null;
         }
 
-        $match = $this->coreMails->match($event->notifiable, $event->notification);
-
-        if ($match === null) {
-            return null;
-        }
-
+        // Everything up to the send is in here, the link included: working
+        // out a link can throw (a host's `createUrlUsing()`, a missing
+        // `password.reset` route), and an exception leaving this listener
+        // would stop the core mail as well. Nobody gets no mail because of a
+        // template.
         try {
+            $match = $this->coreMails->match($event->notifiable, $event->notification);
+
+            if ($match === null) {
+                return null;
+            }
+
             $mail = $this->render($match['slug'], $match['variables'], $match['subject'], $event->notification::class);
         } catch (Throwable $e) {
-            Log::warning('email-templates: the template for a core mail could not be rendered; the core mail was sent instead.', [
-                'template' => $match['slug'],
+            Log::warning('email-templates: a core mail could not be built from its template; the core mail was sent instead.', [
+                'notification' => $event->notification::class,
                 'exception' => $e->getMessage(),
             ]);
 
@@ -72,6 +78,13 @@ class SendCoreMailsFromTemplates
         }
 
         Notification::sendNow($event->notifiable, $mail, ['mail']);
+
+        CoreMailReplaced::dispatch(
+            $match['slug'],
+            $event->notification::class,
+            $event->notifiable,
+            (string) ($match['variables']['user']['email'] ?? ''),
+        );
 
         return false;
     }

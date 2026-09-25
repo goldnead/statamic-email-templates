@@ -68,19 +68,28 @@ class MergeVariables
     }
 
     /**
-     * Sample data for one template: the defaults, with the examples its
-     * sending addon registered for its placeholders on top. So the Live
-     * Preview of a password reset shows a link, not `{{ url }}`.
+     * Sample data for one template. A registered template gets the examples
+     * its sending addon registered, plus `site_name`, and nothing else: the
+     * preview knows exactly what the send knows. Any other template gets the
+     * documented default set.
      *
      * @return array<string,mixed>
      */
     public static function sampleDataFor(?string $slug): array
     {
-        $examples = $slug !== null && $slug !== ''
-            ? app(TemplateRegistry::class)->examples($slug)
-            : [];
+        $definition = $slug !== null && $slug !== ''
+            ? app(TemplateRegistry::class)->find($slug)
+            : null;
 
-        return self::sampleData($examples);
+        if ($definition === null) {
+            return self::sampleData();
+        }
+
+        // A registered template gets what its sender fills, and nothing of
+        // the generic contact set. Otherwise the preview would show "Maria"
+        // for a `{{ contact.first_name }}` that stays a raw tag in the real
+        // mail, and the editor would learn that only from a recipient.
+        return array_replace_recursive(['site_name' => (string) config('app.name')], $definition->examples());
     }
 
     /**

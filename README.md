@@ -446,6 +446,34 @@ How: a `NotificationSending` listener renders the template, sends it as
 `Goldnead\EmailTemplates\CoreMails\TemplatedCoreMail` (its `replaces` property names
 the original class) and cancels the original on the mail channel.
 
+**A host's `toMailUsing()`.** When `ResetPassword::toMailUsing()` is set and
+`createUrlUsing()` is not, core never asks for `resetUrl()` (and the host often has
+no `password.reset` route). The callback is called and the button link of the
+`MailMessage` it returns (`actionUrl`) becomes `{{ url }}`. A result without a
+button link, or anything other than a `MailMessage`, leaves the host's mail
+untouched. `VerifyEmail::toMailUsing()` is handled the same way. Any error while
+building the template mail, a link that cannot be computed included, sends the
+core mail and logs a warning.
+
+**CP resets for Eloquent users.** Statamic's Eloquent user hands a reset to the
+model, which sends Laravel's `ResetPassword`. A reset started on the CP login screen
+therefore also uses `core-password-reset-cp`, with the link that notification
+computes.
+
+### What changes for listeners
+
+Laravel stops at the first `NotificationSending` listener that answers `false`,
+so for a replaced mail:
+
+- `NotificationSending` listeners registered **after** this addon's never see the
+  original on the mail channel. They see the replacement (`TemplatedCoreMail`).
+- `NotificationSent` fires once, for `TemplatedCoreMail`, never for the original.
+  `$event->notification->replaces` names the original class.
+- `Goldnead\EmailTemplates\CoreMails\CoreMailReplaced` fires after the send with
+  `slug`, `originalClass`, `notifiable` and `recipient` (the address). No token
+  and no link. Listen to it to log or forward account mails. This addon ships no
+  Webhook-Manager or Automations bridge; an app that wants one listens to this event.
+
 ```
 php please email-templates:import --source=Statamic --locale=de
 ```

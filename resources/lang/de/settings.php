@@ -29,7 +29,7 @@ return [
         ],
 
         'core_mails' => [
-            'title' => 'Konto-Mails von Statamic und Laravel',
+            'title' => 'Konto-Mails (Passwort, Einladung, Bestätigung)',
             'description' => 'Passwort zurücksetzen (Website und Control Panel), Konto aktivieren, Bestätigungscode und E-Mail-Adresse bestätigen. Eingeschaltet geht jede dieser Mails aus der veröffentlichten Vorlage mit ihrem Slug raus (core-password-reset, core-password-reset-cp, core-activate-account, core-verification-code, core-verify-email). Fehlt die Vorlage oder ist sie ein Entwurf, geht die Mail von Statamic unverändert raus. Die mitgelieferten Vorlagen legt `php please email-templates:import --source=Statamic --locale=de` an.',
         ],
 
@@ -64,7 +64,7 @@ return [
 
         'core_mails_enabled' => [
             'label' => 'Konto-Mails aus Vorlagen verschicken',
-            'description' => 'Aus heißt: Statamic und Laravel verschicken ihre eigenen Texte, auch wenn es Vorlagen gibt.',
+            'description' => 'Aus heißt: diese Mails gehen mit den eingebauten Texten raus, auch wenn es Vorlagen gibt.',
         ],
 
         'countdown_image' => [

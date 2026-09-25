@@ -20,7 +20,16 @@ verification code and Laravel's `VerifyEmail` are sent from the published templa
 with the slugs `core-password-reset`, `core-password-reset-cp`,
 `core-activate-account`, `core-verification-code` and `core-verify-email`. Without a
 published template the core mail goes out unchanged. German and English defaults ship
-with the package.
+with the package. Any error while building the template mail sends the core mail. A
+host's `toMailUsing()` is respected (its button link is used, or its mail is left
+alone). A CP reset by an Eloquent user uses the CP template. Every replacement fires
+`CoreMailReplaced`.
+
+### Changed
+
+- Live Preview and the test send fill a registered template with its registered
+  examples and `site_name` only, no longer with the generic `contact.*` set.
+- `findBySlug()` prefers the current site's entry on a multi-site install.
 
 ## 2.7.1 — 2026-09-19
 

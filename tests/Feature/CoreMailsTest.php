@@ -1,16 +1,21 @@
 <?php
 
+use Goldnead\EmailTemplates\CoreMails\CoreMailReplaced;
 use Goldnead\EmailTemplates\CoreMails\CoreMails;
 use Goldnead\EmailTemplates\CoreMails\TemplatedCoreMail;
+use Goldnead\EmailTemplates\Registry\TemplateRegistry;
 use Goldnead\EmailTemplates\Services\EmailTemplateCollectionManager;
 use Goldnead\EmailTemplates\Support\EmailTemplateData;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Notifications\Events\NotificationSent;
+use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Schema;
 use Statamic\Auth\Passwords\PasswordReset as PasswordResetManager;
 use Statamic\Contracts\Entries\Entry;
 use Statamic\Facades\Collection;
@@ -46,7 +51,9 @@ beforeEach(function () {
 afterEach(function () {
     resetStatamicStatics();
     ResetPassword::createUrlUsing(null);
+    ResetPassword::toMailUsing(null);
     VerifyEmail::createUrlUsing(null);
+    VerifyEmail::toMailUsing(null);
 });
 
 /** Core keeps these in statics; one test's CP reset must not leak into the next. */
@@ -267,6 +274,137 @@ it('does not touch notifications that are not core account mails', function () {
     Notification::sendNow(new CoreMailsHostUser('host@example.com'), new TemplatedCoreMail('x', 'y', 'Eigene Mail', '<p>eigene</p>'));
 
     expect(coreMailsSent()[0]->getSubject())->toBe('Eigene Mail');
+});
+
+/*
+ * A host that customised Laravel's reset mail with toMailUsing() usually has
+ * no `password.reset` route: its link lives in the callback. Asking
+ * resetUrl() for the link then throws RouteNotFoundException, and before the
+ * fix that exception left the listener and no mail went out at all.
+ */
+it('takes the link from a host toMailUsing() callback when there is no reset route', function () {
+    coreTemplate(CoreMails::PASSWORD_RESET);
+    ResetPassword::toMailUsing(fn ($user, string $token) => (new MailMessage)
+        ->subject('Host-Mail')
+        ->action('Zurücksetzen', 'https://host.example.com/pw/'.$token));
+
+    Notification::sendNow(new CoreMailsHostUser('host@example.com', 'Hans'), new ResetPassword('cb-1'));
+
+    $mails = coreMailsSent();
+    expect($mails)->toHaveCount(1)
+        ->and($mails[0]->getSubject())->toBe('Neues Passwort, Hans')
+        ->and($mails[0]->getHtmlBody())->toContain('https://host.example.com/pw/cb-1');
+});
+
+it('leaves the host mail untouched when its toMailUsing() result carries no link', function () {
+    coreTemplate(CoreMails::PASSWORD_RESET);
+    ResetPassword::toMailUsing(fn ($user, string $token) => (new MailMessage)->subject('Host-Mail')->line('Code '.$token));
+
+    Notification::sendNow(new CoreMailsHostUser('host@example.com'), new ResetPassword('cb-2'));
+
+    $mails = coreMailsSent();
+    expect($mails)->toHaveCount(1)
+        ->and($mails[0]->getSubject())->toBe('Host-Mail');
+});
+
+it('takes the verification link from a host VerifyEmail::toMailUsing() callback', function () {
+    coreTemplate(CoreMails::VERIFY_EMAIL, ['subject' => 'Bestätigen', 'body' => '<p><a href="{{ url }}">Los</a></p>']);
+    // Core asks for the link before the callback, so the test app needs one.
+    VerifyEmail::createUrlUsing(fn () => 'https://example.com/verify/core');
+    VerifyEmail::toMailUsing(fn ($user, string $url) => (new MailMessage)->subject('Host')->action('Los', 'https://host.example.com/v/1'));
+
+    Notification::sendNow(new CoreMailsHostUser('host@example.com'), new VerifyEmail);
+
+    expect(coreMailsSent()[0]->getHtmlBody())->toContain('https://host.example.com/v/1');
+});
+
+it('sends the core mail when working out the template values fails', function () {
+    coreTemplate(CoreMails::PASSWORD_RESET);
+    ResetPassword::createUrlUsing(fn () => throw new RuntimeException('kaputt'));
+    ResetPassword::toMailUsing(fn ($user, string $token) => (new MailMessage)->subject('Host-Mail'));
+
+    Notification::sendNow(new CoreMailsHostUser('host@example.com'), new ResetPassword('cb-3'));
+
+    expect(coreMailsSent())->toHaveCount(1)
+        ->and(coreMailsSent()[0]->getSubject())->toBe('Host-Mail');
+});
+
+/** A host model as ChoirLive has it: an Eloquent user Statamic wraps. */
+class CoreMailsEloquentUser extends Illuminate\Foundation\Auth\User
+{
+    use Notifiable;
+
+    protected $table = 'users';
+
+    protected $guarded = [];
+}
+
+/*
+ * Statamic's Eloquent user hands the reset to the model
+ * (`Statamic\Auth\Eloquent\User::sendPasswordResetNotification()`), which
+ * sends Laravel's ResetPassword, not Statamic's. The CP template has to catch
+ * that too, with the link core would have sent.
+ */
+it('uses the CP template for an Eloquent user resetting on the CP login screen', function () {
+    Schema::create('users', function ($table) {
+        $table->id();
+        $table->string('name')->nullable();
+        $table->string('email');
+        $table->string('password')->nullable();
+        $table->timestamps();
+    });
+    Route::get('pw-reset/{token}', fn () => '')->name('password.reset');
+    app('router')->getRoutes()->refreshNameLookups();
+
+    coreTemplate(CoreMails::PASSWORD_RESET_CP, ['subject' => 'CP für {{ user.name }}']);
+    $model = CoreMailsEloquentUser::create(['name' => 'Eva', 'email' => 'eva@example.com']);
+
+    PasswordResetManager::resetFormRoute('statamic.cp.password.reset');
+    (new Statamic\Auth\Eloquent\User)->model($model)->sendPasswordResetNotification('elo-1');
+
+    $mail = coreMailsSent()[0];
+    expect($mail->getSubject())->toBe('CP für Eva')
+        ->and($mail->getHtmlBody())->toContain('pw-reset/elo-1');
+});
+
+it('greets an on-demand recipient by the routed address', function () {
+    coreTemplate(CoreMails::PASSWORD_RESET);
+    ResetPassword::createUrlUsing(fn ($user, string $token) => 'https://example.com/r/'.$token);
+
+    Notification::route('mail', 'anon@example.com')->notify(new ResetPassword('anon-1'));
+
+    $mail = coreMailsSent()[0];
+    expect($mail->getTo()[0]->getAddress())->toBe('anon@example.com')
+        ->and($mail->getSubject())->toBe('Neues Passwort, anon@example.com');
+});
+
+it('announces every replacement with its own event', function () {
+    coreTemplate(CoreMails::PASSWORD_RESET);
+    $seen = [];
+    Event::listen(CoreMailReplaced::class, function (CoreMailReplaced $event) use (&$seen) {
+        $seen[] = $event;
+    });
+
+    $user = statamicUser();
+    $user->sendPasswordResetNotification('tok-ev');
+
+    expect($seen)->toHaveCount(1)
+        ->and($seen[0]->slug)->toBe(CoreMails::PASSWORD_RESET)
+        ->and($seen[0]->originalClass)->toBe(PasswordReset::class)
+        ->and($seen[0]->notifiable)->toBe($user)
+        ->and($seen[0]->recipient)->toBe('maria@example.com');
+});
+
+it('keeps the occasion short and free of framework names', function () {
+    foreach (CoreMails::SLUGS as $slug) {
+        foreach (['de', 'en'] as $locale) {
+            app()->setLocale($locale);
+            $definition = app(TemplateRegistry::class)->find($slug);
+
+            expect(mb_strlen($definition->trigger()))->toBeLessThanOrEqual(40, "{$slug} {$locale}")
+                ->and($definition->trigger().$definition->title())->not->toContain('Laravel');
+        }
+    }
 });
 
 it('sends the plain-text part of the template along', function () {

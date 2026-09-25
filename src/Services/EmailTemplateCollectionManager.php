@@ -12,6 +12,7 @@ use Statamic\Contracts\Entries\Entry as EntryContract;
 use Statamic\Facades\Blueprint;
 use Statamic\Facades\Collection;
 use Statamic\Facades\Entry;
+use Statamic\Facades\Site;
 use Statamic\Fields\Blueprint as BlueprintInstance;
 
 /**
@@ -232,6 +233,18 @@ class EmailTemplateCollectionManager
 
         if (Brands::active() && ($brand = Brands::current()) !== null) {
             $query->where(Brands::FIELD, $brand);
+        }
+
+        // Multi-site: a template and its localizations share the slug, and
+        // `first()` alone returned whichever the Stache listed first, so an
+        // English visitor could get the German reset mail. The current site's
+        // entry wins; any other only when this site has none.
+        if (Site::hasMultiple()) {
+            $local = (clone $query)->where('site', Site::current()->handle())->first();
+
+            if ($local !== null) {
+                return $local;
+            }
         }
 
         return $query->first();

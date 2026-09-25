@@ -10,6 +10,8 @@ use Goldnead\EmailTemplates\Support\EmailTemplateData;
 use Goldnead\EmailTemplates\Support\MergeVariables;
 use Statamic\Facades\Blueprint;
 use Statamic\Facades\Collection;
+use Statamic\Facades\Entry;
+use Statamic\Facades\Site;
 
 /**
  * The registry: how an addon says which of its mails goes out when, and what
@@ -129,6 +131,57 @@ it('previews a registered template with its examples', function () {
     expect(MergeVariables::sampleDataFor('teams-invitation')['team']['name'])->toBe('Sopran 1')
         ->and(MergeVariables::sampleDataFor(CoreMails::PASSWORD_RESET)['url'])->toStartWith('https://example.com/')
         ->and(MergeVariables::sampleDataFor(null)['contact']['first_name'])->toBe('Maria');
+});
+
+/*
+ * Preview must not know more than the send. A core password reset is filled
+ * with user.*, url, expires_* and site_name — never with contact.*. A preview
+ * that shows "Maria" for {{ contact.first_name }} lets an editor write a tag
+ * that arrives in the inbox as a raw `{{ contact.first_name }}`.
+ */
+it('previews a registered template with nothing but its own placeholders and the site name', function () {
+    config()->set('app.name', 'ChoirLive');
+    $sample = MergeVariables::sampleDataFor(CoreMails::PASSWORD_RESET);
+
+    expect($sample)->not->toHaveKey('contact')
+        ->and($sample)->not->toHaveKey('unsubscribe_url')
+        ->and($sample['site_name'])->toBe('ChoirLive')
+        ->and($sample['user']['name'])->toBe('Maria Beispiel');
+});
+
+it('shows "Sent on" as plain text on the edit form and names the template\'s own placeholders', function () {
+    $this->actingAsSuperUser();
+    [$entry] = app(EmailTemplateCollectionManager::class)->upsert(new EmailTemplateData(slug: CoreMails::PASSWORD_RESET, title: 'Reset'));
+
+    $html = html_entity_decode($this->get(cp_route('collections.entries.edit', [EmailTemplateCollectionManager::HANDLE, $entry->id()]))
+        ->assertOk()
+        ->getContent());
+
+    // The page also carries the whole translation table, so the generic text
+    // is looked for where a field's config would hold it.
+    expect($html)->toMatch('/"handle":"sent_on"[^{}]*"type":"html"/')
+        ->and($html)->not->toMatch('/"handle":"sent_on"[^{}]*"type":"textarea"/')
+        ->and($html)->not->toMatch('/"instructions":"[^"]*contact\.first_name/')
+        ->and($html)->toMatch('/"instructions":"[^"]*\{\{ user\.name \}\}/');
+});
+
+it('finds the template of the current site first', function () {
+    Site::setSites([
+        'de' => ['name' => 'Deutsch', 'url' => '/', 'locale' => 'de_DE'],
+        'en' => ['name' => 'English', 'url' => '/en/', 'locale' => 'en_US'],
+    ]);
+    Collection::findByHandle(EmailTemplateCollectionManager::HANDLE)->sites(['de', 'en'])->save();
+
+    $de = Entry::make()->collection(EmailTemplateCollectionManager::HANDLE)->locale('de')->slug('willkommen')->data(['title' => 'Willkommen']);
+    $de->save();
+    $en = $de->makeLocalization('en')->data(['title' => 'Welcome']);
+    $en->save();
+
+    Site::setCurrent('en');
+    expect(app(EmailTemplateCollectionManager::class)->findBySlug('willkommen')->value('title'))->toBe('Welcome');
+
+    Site::setCurrent('de');
+    expect(app(EmailTemplateCollectionManager::class)->findBySlug('willkommen')->value('title'))->toBe('Willkommen');
 });
 
 it('shows "Sent on" in the Control Panel listing', function () {

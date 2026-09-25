@@ -29,7 +29,7 @@ return [
         ],
 
         'core_mails' => [
-            'title' => 'Account mails from Statamic and Laravel',
+            'title' => 'Account mails (password, invitation, confirmation)',
             'description' => 'Password reset (website and Control Panel), account activation, verification code and email verification. When on, each of these mails is sent from the published template with its slug (core-password-reset, core-password-reset-cp, core-activate-account, core-verification-code, core-verify-email). Without that template, or while it is a draft, Statamic sends its own mail unchanged. `php please email-templates:import --source=Statamic --locale=en` creates the shipped templates.',
         ],
 
@@ -64,7 +64,7 @@ return [
 
         'core_mails_enabled' => [
             'label' => 'Send account mails from templates',
-            'description' => 'Off means Statamic and Laravel send their own texts, even where a template exists.',
+            'description' => 'Off means these mails go out with the built-in texts, even where a template exists.',
         ],
 
         'countdown_image' => [

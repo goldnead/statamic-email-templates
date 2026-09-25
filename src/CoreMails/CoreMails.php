@@ -7,6 +7,7 @@ use Goldnead\EmailTemplates\Listeners\SendCoreMailsFromTemplates;
 use Goldnead\EmailTemplates\Registry\TemplateRegistry;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Auth\Notifications\VerifyEmail;
+use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use ReflectionClass;
 use ReflectionMethod;
@@ -130,7 +131,7 @@ class CoreMails
      */
     public function match(mixed $notifiable, Notification $notification): ?array
     {
-        $variables = ['user' => $this->user($notifiable), 'site_name' => (string) config('app.name')];
+        $variables = ['user' => $this->user($notifiable, $notification), 'site_name' => (string) config('app.name')];
 
         // ActivateAccount extends PasswordReset, so it has to be asked first.
         if ($notification instanceof ActivateAccount) {
@@ -162,11 +163,20 @@ class CoreMails
         }
 
         if ($notification instanceof ResetPassword) {
+            $url = $this->laravelResetUrl($notification, $notifiable);
+
+            if ($url === null) {
+                return null;
+            }
+
+            // Statamic's Eloquent user hands a CP reset to the model, which
+            // sends this class rather than Statamic's. Same static decides.
+            $cp = $this->isCpReset();
+
             return [
-                'slug' => self::PASSWORD_RESET,
-                'variables' => $variables + [
-                    'url' => (string) $this->callProtected($notification, 'resetUrl', $notifiable),
-                ] + $this->expiry((string) config('auth.defaults.passwords')),
+                'slug' => $cp ? self::PASSWORD_RESET_CP : self::PASSWORD_RESET,
+                'variables' => $variables + ['url' => $url]
+                    + $this->expiry($this->statamicBroker(PasswordResetManager::BROKER_RESETS, $cp ? 'cp' : 'web')),
                 'subject' => null,
             ];
         }
@@ -174,10 +184,22 @@ class CoreMails
         if ($notification instanceof VerifyEmail) {
             $minutes = (int) config('auth.verification.expire', 60);
 
+            // Core computes the link before it asks a toMailUsing() callback,
+            // so this does too; the callback then gets the last word.
+            $url = (string) $this->callProtected($notification, 'verificationUrl', $notifiable);
+
+            if (VerifyEmail::$toMailCallback) {
+                $url = $this->actionUrlOf(call_user_func(VerifyEmail::$toMailCallback, $notifiable, $url));
+
+                if ($url === null) {
+                    return null;
+                }
+            }
+
             return [
                 'slug' => self::VERIFY_EMAIL,
                 'variables' => $variables + [
-                    'url' => (string) $this->callProtected($notification, 'verificationUrl', $notifiable),
+                    'url' => $url,
                     'expires_minutes' => $minutes,
                     'expires_in' => self::humanMinutes($minutes),
                 ],
@@ -194,6 +216,38 @@ class CoreMails
         }
 
         return null;
+    }
+
+    /**
+     * The link Laravel's own reset mail would carry.
+     *
+     * A host that customised that mail with `toMailUsing()` and not
+     * `createUrlUsing()` has its link inside the callback, and often no
+     * `password.reset` route at all — core never calls `resetUrl()` then.
+     * So the callback is asked, and the button link of the MailMessage it
+     * returns is used. A result without one (a code instead of a link, a
+     * Mailable) means this mail is not one a template can stand in for:
+     * null, and the host's mail goes out as it would have.
+     */
+    protected function laravelResetUrl(ResetPassword $notification, mixed $notifiable): ?string
+    {
+        if (ResetPassword::$toMailCallback && ! ResetPassword::$createUrlCallback) {
+            return $this->actionUrlOf(call_user_func(ResetPassword::$toMailCallback, $notifiable, $notification->token));
+        }
+
+        return (string) $this->callProtected($notification, 'resetUrl', $notifiable);
+    }
+
+    protected function actionUrlOf(mixed $message): ?string
+    {
+        if (! $message instanceof MailMessage) {
+            return null;
+        }
+
+        // Declared as a string, null until `action()` is called.
+        $url = trim((string) $message->actionUrl);
+
+        return $url === '' ? null : $url;
     }
 
     /**
@@ -251,7 +305,7 @@ class CoreMails
      *
      * @return array{name: string, email: string}
      */
-    protected function user(mixed $notifiable): array
+    protected function user(mixed $notifiable, Notification $notification): array
     {
         if ($notifiable instanceof StatamicUser) {
             $email = (string) $notifiable->email();
@@ -263,8 +317,32 @@ class CoreMails
             $name = (string) (data_get($notifiable, 'name') ?? '');
         }
 
+        // `Notification::route('mail', …)` has no model behind it: the
+        // address is only in the route, which is also where the mail goes.
+        if ($email === '' && is_object($notifiable) && method_exists($notifiable, 'routeNotificationFor')) {
+            $email = $this->addressOf($notifiable->routeNotificationFor('mail', $notification));
+        }
+
         // "Hallo ," reads broken. Greet an account without a name by its address.
         return ['name' => trim($name) !== '' ? $name : $email, 'email' => $email];
+    }
+
+    /**
+     * A mail route is a string, or `[address => name]`, or a list of either.
+     */
+    protected function addressOf(mixed $route): string
+    {
+        if (is_string($route)) {
+            return $route;
+        }
+
+        if (is_array($route) && $route !== []) {
+            $key = array_key_first($route);
+
+            return is_string($key) ? $key : $this->addressOf($route[$key]);
+        }
+
+        return '';
     }
 
     /** The token core passes into its notification's constructor. */
