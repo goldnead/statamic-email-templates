@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+### Fixed: the preheader no longer trips SpamAssassin's FONT_INVIS_MSGID
+
+The hidden preheader snippet carried `font-size:1px;line-height:1px;color:transparent`
+on top of `display:none`. That short, invisible-font style is exactly what SpamAssassin's
+`FONT_INVIS_MSGID` rule (2.5 points) looks for, and it sank a welcome mail from 9/10 to
+6/10 in mail-tester. The three properties are gone; `display:none`, `max-height:0`,
+`overflow:hidden`, `mso-hide:all` and `opacity:0` still hide the snippet, and inbox
+clients still read it as the preview text.
+
 ## 2.8.0 — 2026-09-25
 
 ### Added: a registry for which mail goes out when

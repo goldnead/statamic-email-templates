@@ -34,8 +34,11 @@ class EmailPreheader
         // MergeVariables pass still resolves them.
         $text = htmlspecialchars($preview, ENT_QUOTES, 'UTF-8');
 
-        return '<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;'
-            .'font-size:1px;line-height:1px;color:transparent;opacity:0;" aria-hidden="true">'
+        // No font-size / line-height / color:transparent here: that exact
+        // combination in a short style is SpamAssassin's FONT_INVIS_MSGID
+        // (2.5 points). display:none, zero max-height and opacity:0 hide the
+        // snippet on their own; the inbox preview reads the text regardless.
+        return '<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;opacity:0;" aria-hidden="true">'
             .$text
             .'</div>';
     }
