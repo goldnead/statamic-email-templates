@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 2.8.1 — 2026-10-13
 
 ### Fixed: the preheader no longer trips SpamAssassin's FONT_INVIS_MSGID
 
