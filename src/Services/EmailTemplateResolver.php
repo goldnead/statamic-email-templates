@@ -90,7 +90,11 @@ class EmailTemplateResolver
         // Applied here so every consumer of the resolver — the automations send
         // action above all — sends the branded HTML, matching the CP Live
         // Preview exactly.
-        $data->body = BrandedBodyRenderer::wrap($data->body, $data->subject, $data->layout);
+        // A fallback that is already a complete layout (`branded: false`) is not
+        // framed a second time.
+        if ($data->branded) {
+            $data->body = BrandedBodyRenderer::wrap($data->body, $data->subject, $data->layout);
+        }
 
         return $data;
     }

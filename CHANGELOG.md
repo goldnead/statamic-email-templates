@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Fixed: a fallback that is already a complete layout is not wrapped in the branded shell again
+
+- `EmailTemplates::resolve()` accepts `branded => false` in the array a caller's fallback returns. The body is then handed back as is. Marketing's template files carry their own header and footer; with a branded layout configured they were framed a second time and, on a phone, the mail came out wider than the screen. Without the key nothing changes.
+
 ## 2.9.0 — 2026-10-17
 
 ### Changed

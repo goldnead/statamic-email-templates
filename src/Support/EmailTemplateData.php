@@ -26,6 +26,13 @@ class EmailTemplateData
         public ?string $description = null,
         public ?string $layout = null,
         public string $source = 'entry',
+        /**
+         * Whether the resolver may wrap the body in the host's branded shell.
+         * A caller's fallback that already is a complete mail layout (marketing's
+         * template files, with their own header and footer) says `branded: false`
+         * so it is not framed a second time.
+         */
+        public bool $branded = true,
     ) {}
 
     /**
@@ -46,6 +53,7 @@ class EmailTemplateData
             description: isset($data['description']) ? (string) $data['description'] : null,
             layout: isset($data['layout']) && (string) $data['layout'] !== '' ? (string) $data['layout'] : null,
             source: (string) ($data['source'] ?? 'entry'),
+            branded: ($data['branded'] ?? true) !== false,
         );
     }
 
