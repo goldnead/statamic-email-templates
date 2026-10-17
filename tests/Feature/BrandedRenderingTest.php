@@ -73,6 +73,22 @@ it('also brands the inline fallback body when a slug does not resolve', function
         ->toContain('BRAND FOOTER');
 });
 
+it('does not wrap a fallback that says it is already a complete layout', function () {
+    // backlog-email-templates-doppelter-markenrahmen: marketing's own layout
+    // file carries its header and footer; a second shell around it doubles
+    // the frame and widens the mail past a phone screen.
+    $resolved = app(EmailTemplateResolver::class)->resolve(
+        'missing-slug',
+        fn () => ['html' => '<p>Eigenes Layout</p>', 'subject' => 'Betreff', 'branded' => false],
+    );
+
+    expect($resolved)->not->toBeNull();
+    expect($resolved->body)
+        ->toContain('Eigenes Layout')
+        ->not->toContain('BRAND HEADER')
+        ->not->toContain('BRAND FOOTER');
+});
+
 it('wraps the send body in the per-entry chosen layout', function () {
     // Map a `transactional` handle to its own shell fixture.
     config()->set('email-templates.layouts', [
