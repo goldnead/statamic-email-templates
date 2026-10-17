@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 2.9.1 — 2026-10-18
 
 ### Fixed: a fallback that is already a complete layout is not wrapped in the branded shell again
 
