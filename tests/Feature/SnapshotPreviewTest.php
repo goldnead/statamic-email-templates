@@ -182,6 +182,46 @@ it('shows a snapshot to its own brand and hides it from another brand', function
     $this->get($url)->assertNotFound();
 });
 
+it('shows a snapshot without a brand to the default brand and hides it from another', function () {
+    Snapshots::flush();
+
+    // Recorded before brands existed: no brand on the row.
+    $snapshot = Snapshots::record('marketing:campaign', 13, [
+        'subject' => 'Alt-Snapshot',
+        'body' => '<p>Alt-Snapshot</p>',
+    ]);
+    expect($snapshot->brand)->toBeNull();
+
+    $this->actingAsSuperUser();
+    $url = cp_route('email-templates.snapshots.preview', ['snapshot' => $snapshot->id]);
+
+    // The fake's default brand is `chorwerkstatt`.
+    snapshotBrandContext('chorwerkstatt');
+    $this->get($url)->assertOk();
+
+    snapshotBrandContext('nordlicht');
+    $this->get($url)->assertNotFound();
+});
+
+it('fails closed when brands are active but none is resolved', function () {
+    Snapshots::flush();
+
+    $branded = Snapshots::record('marketing:campaign', 14, [
+        'subject' => 'Mit Marke',
+        'body' => '<p>Mit Marke</p>',
+    ], ['brand' => 'chorwerkstatt']);
+    $unbranded = Snapshots::record('marketing:campaign', 15, [
+        'subject' => 'Ohne Marke',
+        'body' => '<p>Ohne Marke</p>',
+    ]);
+
+    snapshotBrandContext(null);
+    $this->actingAsSuperUser();
+
+    $this->get(cp_route('email-templates.snapshots.preview', ['snapshot' => $branded->id]))->assertNotFound();
+    $this->get(cp_route('email-templates.snapshots.preview', ['snapshot' => $unbranded->id]))->assertNotFound();
+});
+
 it('keeps serving every snapshot on a single-brand install', function () {
     Snapshots::flush();
 
