@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 2.9.2 — 2026-11-16
 
 ### Fixed: the snapshot preview shows only the current brand's snapshots
 
