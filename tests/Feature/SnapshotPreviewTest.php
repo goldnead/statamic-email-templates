@@ -130,3 +130,68 @@ it('does not wrap a snapshot that is already a complete document', function () {
 
     expect(substr_count(SnapshotPreview::renderMail($snapshot), '<html'))->toBe(1);
 });
+
+/*
+ * Die Vorschau zeigt nur Snapshots der aktuellen Marke. Auf einem
+ * Mehrmarken-Host sah sonst jeder angemeldete Nutzer die Versandhistorie aller
+ * Marken (Ticket backlog-snapshot-vorschau-ohne-eigenes-recht).
+ */
+function snapshotBrandContext(?string $current, bool $multi = true): void
+{
+    app()->instance('brand-context', new class($current, $multi)
+    {
+        public function __construct(private ?string $current, private bool $multi) {}
+
+        public function multiBrandEnabled(): bool
+        {
+            return $this->multi;
+        }
+
+        public function hasCurrent(): bool
+        {
+            return $this->current !== null;
+        }
+
+        public function current(): object
+        {
+            return (object) ['handle' => $this->current, 'name' => $this->current];
+        }
+
+        public function default(): object
+        {
+            return (object) ['handle' => 'chorwerkstatt', 'name' => 'chorwerkstatt'];
+        }
+    });
+}
+
+it('shows a snapshot to its own brand and hides it from another brand', function () {
+    Snapshots::flush();
+
+    $snapshot = Snapshots::record('marketing:campaign', 11, [
+        'subject' => 'Nur fuer Chorwerkstatt',
+        'body' => '<p>Nur fuer Chorwerkstatt</p>',
+    ], ['brand' => 'chorwerkstatt']);
+
+    $this->actingAsSuperUser();
+    $url = cp_route('email-templates.snapshots.preview', ['snapshot' => $snapshot->id]);
+
+    snapshotBrandContext('chorwerkstatt');
+    $this->get($url)->assertOk();
+
+    snapshotBrandContext('nordlicht');
+    $this->get($url)->assertNotFound();
+});
+
+it('keeps serving every snapshot on a single-brand install', function () {
+    Snapshots::flush();
+
+    $snapshot = Snapshots::record('marketing:campaign', 12, [
+        'subject' => 'Einmarke',
+        'body' => '<p>Einmarke</p>',
+    ], ['brand' => 'chorwerkstatt']);
+
+    snapshotBrandContext('nordlicht', multi: false);
+    $this->actingAsSuperUser();
+
+    $this->get(cp_route('email-templates.snapshots.preview', ['snapshot' => $snapshot->id]))->assertOk();
+});
