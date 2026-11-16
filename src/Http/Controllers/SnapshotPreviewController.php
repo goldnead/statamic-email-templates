@@ -4,6 +4,7 @@ namespace Goldnead\EmailTemplates\Http\Controllers;
 
 use Goldnead\EmailTemplates\Snapshots\SnapshotPreview;
 use Goldnead\EmailTemplates\Snapshots\Snapshots;
+use Goldnead\EmailTemplates\Support\Brands;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 
@@ -18,9 +19,9 @@ use Illuminate\Routing\Controller;
  * merge data; putting a `?contact=` parameter here would mean this package
  * guessing which of three contact stores a given id belongs to.
  *
- * Behind the CP's own authentication, and no further permission of its own: a
- * snapshot is a template with placeholders in it, the same thing any
- * Control Panel user can already open under Content → E-Mail-Vorlagen.
+ * Behind the CP's own authentication, and no further permission of its own
+ * (consumers embed it as an iframe and bring their own permissions). What it
+ * does enforce is the brand: only snapshots of the current brand are shown.
  */
 class SnapshotPreviewController extends Controller
 {
@@ -29,6 +30,18 @@ class SnapshotPreviewController extends Controller
         $model = Snapshots::find($snapshot);
 
         abort_if($model === null, 404);
+
+        // A snapshot belongs to the brand it went out under. On a multi-brand
+        // install the preview shows only the current brand's; another brand's
+        // answers 404, the same as a missing id, so nothing is confirmed. A
+        // snapshot recorded without a brand counts as the default brand's.
+        // With no resolved brand nothing is shown rather than everything,
+        // as in the template listing. Single-brand installs are untouched.
+        if (Brands::active()) {
+            $owner = ($model->brand !== null && $model->brand !== '') ? $model->brand : Brands::default();
+
+            abort_if($owner === null || $owner !== Brands::current(), 404);
+        }
 
         return response(SnapshotPreview::document($model))
             ->header('Content-Type', 'text/html; charset=utf-8');

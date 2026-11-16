@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Fixed: the snapshot preview shows only the current brand's snapshots
+
+- `GET /cp/email-templates/snapshots/{snapshot}/preview` answered every logged-in Control Panel user for every brand's snapshot. On a multi-brand install it now answers 404 for a snapshot of another brand (and for none when no brand is resolved). A snapshot without a brand counts as the default brand's; where no default brand exists, such old snapshots answer 404. Single-brand installs are unchanged. The id is still sequential; the preview needs no permission of its own so consumers can keep embedding it as an iframe.
+
 ## 2.9.1 — 2026-10-18
 
 ### Fixed: a fallback that is already a complete layout is not wrapped in the branded shell again
