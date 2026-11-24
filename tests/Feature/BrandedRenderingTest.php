@@ -5,6 +5,7 @@ use Goldnead\EmailTemplates\Services\EmailTemplateCollectionManager;
 use Goldnead\EmailTemplates\Services\EmailTemplateResolver;
 use Goldnead\EmailTemplates\Support\BrandedBodyRenderer;
 use Goldnead\EmailTemplates\Support\EmailTemplateData;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\View;
 use Statamic\Facades\Collection;
 
@@ -138,6 +139,29 @@ it('falls back to the branded layout when an entry picks no layout', function ()
         ->toContain('Schön dass du da bist.')
         ->toContain('BRAND FOOTER')
         ->not->toContain('TRANSACTIONAL HEADER');
+});
+
+it('falls down the chain when a mapped layout view does not exist, instead of sending a bare body', function () {
+    // config/email-templates.php promises: "a mapped view that does not exist
+    // always falls back down this chain". A typo in the map used to send every
+    // mail of that layout without header and footer, with nothing in the log.
+    Log::spy();
+    config()->set('email-templates.layouts', ['sequence' => 'testbrand::tippfehler']);
+
+    $wrapped = BrandedBodyRenderer::wrap('<p>Hallo</p>', 'Betreff', 'sequence');
+
+    expect($wrapped)->toContain('BRAND HEADER')->toContain('<p>Hallo</p>')->toContain('BRAND FOOTER');
+
+    Log::shouldHaveReceived('warning')->once();
+});
+
+it('warns and returns the body when no layout in the chain exists', function () {
+    Log::spy();
+    config()->set('email-templates.branded_layout', 'testbrand::auch-weg');
+
+    expect(BrandedBodyRenderer::wrap('<p>Hallo</p>', 'Betreff'))->toBe('<p>Hallo</p>');
+
+    Log::shouldHaveReceived('warning')->once();
 });
 
 it('falls back to the branded layout for an unknown layout handle', function () {

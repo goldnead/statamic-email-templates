@@ -2,6 +2,7 @@
 
 namespace Goldnead\EmailTemplates\Support;
 
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\View;
 
 /**
@@ -40,7 +41,23 @@ class BrandedBodyRenderer
      */
     public static function resolveLayout(?string $layoutHandle = null): ?string
     {
-        return LayoutResolver::resolve($layoutHandle);
+        $chain = LayoutResolver::chain($layoutHandle);
+
+        foreach ($chain as $view) {
+            if (View::exists($view)) {
+                return $view;
+            }
+
+            // Configured, but not there: a typo in the layouts map or a renamed
+            // view. Without this the mail leaves without header, footer and
+            // unsubscribe link, and nothing says why.
+            Log::warning('email-templates: configured layout view does not exist, trying the next one', [
+                'view' => $view,
+                'layout' => $layoutHandle,
+            ]);
+        }
+
+        return null;
     }
 
     /**

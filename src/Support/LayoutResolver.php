@@ -24,24 +24,35 @@ class LayoutResolver
      */
     public static function resolve(?string $handle = null): ?string
     {
+        return static::chain($handle)[0] ?? null;
+    }
+
+    /**
+     * Every configured view for $handle in precedence order (entry layout,
+     * default layout, branded layout), without duplicates. Whether a view
+     * exists is not asked here: the renderer walks this list and takes the
+     * first one that does.
+     *
+     * @return list<string>
+     */
+    public static function chain(?string $handle = null): array
+    {
         $layouts = config('email-templates.layouts');
         $layouts = is_array($layouts) ? $layouts : [];
 
-        // 1. The entry's own choice.
-        if (($view = static::lookup($layouts, $handle)) !== null) {
-            return $view;
-        }
-
-        // 2. The configured default layout handle.
         $default = config('email-templates.default_layout');
-        if (($view = static::lookup($layouts, is_string($default) ? $default : null)) !== null) {
-            return $view;
-        }
-
-        // 3. The single branded layout (historic behaviour).
         $branded = config('email-templates.branded_layout');
 
-        return is_string($branded) && trim($branded) !== '' ? $branded : null;
+        $views = [
+            // 1. The entry's own choice.
+            static::lookup($layouts, $handle),
+            // 2. The configured default layout handle.
+            static::lookup($layouts, is_string($default) ? $default : null),
+            // 3. The single branded layout (historic behaviour).
+            is_string($branded) && trim($branded) !== '' ? $branded : null,
+        ];
+
+        return array_values(array_unique(array_filter($views, fn ($view) => $view !== null)));
     }
 
     /**
