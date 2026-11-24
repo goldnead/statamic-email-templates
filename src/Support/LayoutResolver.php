@@ -13,8 +13,9 @@ namespace Goldnead\EmailTemplates\Support;
  *   3. `email-templates.branded_layout` — the ultimate, back-compatible fallback
  *
  * Any unknown/blank handle simply falls through to the next step, so nothing
- * ever throws for a bad value; the caller still guards `View::exists()` before
- * rendering.
+ * ever throws for a bad value. This class only reads config: it does not ask
+ * whether a view exists. {@see BrandedBodyRenderer::resolveLayout()} walks
+ * {@see chain()} and takes the first view that does.
  */
 class LayoutResolver
 {

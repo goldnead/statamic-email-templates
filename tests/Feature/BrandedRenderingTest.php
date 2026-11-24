@@ -155,6 +155,17 @@ it('falls down the chain when a mapped layout view does not exist, instead of se
     Log::shouldHaveReceived('warning')->once();
 });
 
+it('reports a missing layout view once, however often the chain is walked', function () {
+    Log::spy();
+    config()->set('email-templates.layouts', ['sequence' => 'testbrand::nur-einmal-weg']);
+
+    BrandedBodyRenderer::enabledFor('sequence');
+    BrandedBodyRenderer::wrap('<p>Hallo</p>', 'Betreff', 'sequence');
+    BrandedBodyRenderer::wrap('<p>Hallo</p>', 'Betreff', 'sequence');
+
+    Log::shouldHaveReceived('warning')->once();
+});
+
 it('warns and returns the body when no layout in the chain exists', function () {
     Log::spy();
     config()->set('email-templates.branded_layout', 'testbrand::auch-weg');

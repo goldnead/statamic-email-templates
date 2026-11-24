@@ -21,11 +21,16 @@ use Illuminate\Support\Facades\View;
  * for a native mail now surrounds every managed-template body — in the CP Live
  * Preview and on every real send alike, since both flow through this one class.
  *
- * Defensive: if the configured layout view does not exist, {@see enabled()} is
- * false and the body is returned raw rather than throwing mid-send.
+ * Defensive: a configured layout view that does not exist is skipped (and
+ * logged once per view and handle and process), the next one in the chain is
+ * used. Only when no view in the chain exists is the body returned raw rather
+ * than throwing mid-send.
  */
 class BrandedBodyRenderer
 {
+    /** @var array<string, true> Views already reported missing in this process. */
+    protected static array $reportedMissing = [];
+
     /** The configured branded layout view name, or null when unset/blank. */
     public static function layout(): ?string
     {
@@ -51,10 +56,16 @@ class BrandedBodyRenderer
             // Configured, but not there: a typo in the layouts map or a renamed
             // view. Without this the mail leaves without header, footer and
             // unsubscribe link, and nothing says why.
-            Log::warning('email-templates: configured layout view does not exist, trying the next one', [
-                'view' => $view,
-                'layout' => $layoutHandle,
-            ]);
+            $key = $view.'|'.$layoutHandle;
+
+            if (! isset(static::$reportedMissing[$key])) {
+                static::$reportedMissing[$key] = true;
+
+                Log::warning('email-templates: configured layout view does not exist, trying the next one', [
+                    'view' => $view,
+                    'layout' => $layoutHandle,
+                ]);
+            }
         }
 
         return null;
