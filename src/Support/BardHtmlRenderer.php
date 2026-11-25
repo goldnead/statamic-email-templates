@@ -60,7 +60,13 @@ class BardHtmlRenderer
             }
         } catch (\Throwable $e) {
             $failure = $e;
-            // fall through to the Statamic augmentor
+            // Fall through to the Statamic augmentor. Its HTML can differ from
+            // the tiptap one, so the switch itself is worth a line.
+            Log::info('email-templates: the tiptap renderer failed for a Bard body; falling back to the Statamic augmentor.', [
+                'template' => $handle,
+                'exception' => $e::class,
+                'message' => $e->getMessage(),
+            ]);
         }
 
         // Fallback: Statamic's own Bard augmentor prosemirror -> HTML converter.
