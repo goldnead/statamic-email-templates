@@ -5,6 +5,7 @@ namespace Goldnead\EmailTemplates\Support;
 use Goldnead\BrandContext\Contracts\SenderIdentityResolver;
 use Goldnead\BrandContext\Facades\BrandContext;
 use Goldnead\EmailTemplates\Registry\TemplateRegistry;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Merge-variable substitution for email templates.
@@ -162,7 +163,7 @@ class MergeVariables
         $flat = self::flatten($data);
         $rawKeys = $raw === [] ? self::RAW_VARIABLES : array_merge(self::RAW_VARIABLES, $raw);
 
-        $text = (string) preg_replace_callback(
+        $resolved = preg_replace_callback(
             '/\{\{\s*([a-zA-Z0-9_.]+)\s*\}\}/',
             function (array $m) use ($flat, $escape, $rawKeys) {
                 if (! array_key_exists($m[1], $flat)) {
@@ -177,6 +178,13 @@ class MergeVariables
             },
             $text
         );
+
+        // A failed pass keeps the text as it was: an empty body is worse than a visible tag.
+        if ($resolved === null) {
+            Log::error('email-templates: the merge variables could not be applied, the text goes out with its tags.', ['error' => preg_last_error_msg()]);
+        }
+
+        $text = $resolved ?? $text;
 
         // Second pass, after the plain tags: `{{ countdown until="…" }}` and
         // friends take parameters, and a parameter may itself have been a
