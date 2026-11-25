@@ -84,7 +84,7 @@ class LivePreviewController extends Controller
         // author `&amp;` where they wrote `&`.
         $subject = MergeVariables::apply((string) ($entry->value('subject') ?? ''), $sample, escape: false);
         $preview = MergeVariables::apply((string) ($entry->value('preview') ?? ''), $sample, escape: false);
-        $bodyHtml = MergeVariables::apply($this->renderer->render($entry->value('body')), $sample);
+        $bodyHtml = MergeVariables::apply($this->renderer->render($entry->value('body'), (string) $entry->slug()), $sample);
 
         // Mirror the send path: the hidden preheader rides at the very top of
         // the body. It stays invisible in the split-screen, but keeps preview

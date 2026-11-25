@@ -5,6 +5,7 @@ use Goldnead\EmailTemplates\CoreMails\CoreMails;
 use Goldnead\EmailTemplates\CoreMails\TemplatedCoreMail;
 use Goldnead\EmailTemplates\Registry\TemplateRegistry;
 use Goldnead\EmailTemplates\Services\EmailTemplateCollectionManager;
+use Goldnead\EmailTemplates\Services\EmailTemplateResolver;
 use Goldnead\EmailTemplates\Support\EmailTemplateData;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Auth\Notifications\VerifyEmail;
@@ -14,6 +15,7 @@ use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Exceptions;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Route;
@@ -26,6 +28,7 @@ use Statamic\Notifications\ActivateAccount;
 use Statamic\Notifications\ElevatedSessionVerificationCode;
 use Statamic\Notifications\PasswordReset;
 use Symfony\Component\Mailer\SentMessage;
+use Symfony\Component\Mailer\Transport\AbstractTransport;
 
 /**
  * Statamic's and Laravel's own account mails, sent from templates.
@@ -269,6 +272,74 @@ it('falls back to the core mail when the template cannot be rendered', function 
     expect(coreMailsSent())->toHaveCount(1)
         ->and(coreMailsSent()[0]->getSubject())->toBe(__('statamic::messages.reset_password_notification_subject'));
 });
+
+it('logs the template handle when its body cannot be rendered', function () {
+    // Finding 5: a render error became an empty body and the core mail went
+    // out instead, with no line in the log saying which template broke.
+    Log::spy();
+    $entry = coreTemplate(CoreMails::PASSWORD_RESET);
+    $entry->set('body', [['type' => 'paragraph', 'content' => 'kaputt']])->save();
+
+    statamicUser()->sendPasswordResetNotification('tok-5');
+
+    Log::shouldHaveReceived('warning')
+        ->withArgs(fn (string $message, array $context) => ($context['template'] ?? null) === CoreMails::PASSWORD_RESET
+            && ($context['exception'] ?? '') !== '')
+        ->atLeast()->once();
+});
+
+it('names the template and the recipient id when building the template mail fails', function () {
+    // Finding 11: the warning had no slug and no recipient. The address itself
+    // stays out of the log, the id is enough to find the account.
+    Log::spy();
+    coreTemplate(CoreMails::PASSWORD_RESET);
+    $resolver = Mockery::mock(EmailTemplateResolver::class);
+    $resolver->shouldReceive('forEntry')->andThrow(new RuntimeException('render kaputt'));
+    app()->instance(EmailTemplateResolver::class, $resolver);
+    $user = statamicUser();
+
+    $user->sendPasswordResetNotification('tok-11');
+
+    expect(coreMailsSent())->toHaveCount(1);
+    Log::shouldHaveReceived('warning')
+        ->withArgs(fn (string $message, array $context) => ($context['slug'] ?? null) === CoreMails::PASSWORD_RESET
+            && ($context['recipient'] ?? null) === (string) $user->id()
+            && ! str_contains(json_encode($context), 'maria@example.com'))
+        ->once();
+});
+
+it('logs the template and the recipient when sending the template mail fails, then rethrows', function () {
+    // Finding 11, second half: sendNow() sits outside the try. The error must
+    // still reach the caller, but with the context that says which mail it was.
+    Log::spy();
+    coreTemplate(CoreMails::PASSWORD_RESET);
+    Mail::extend('core-kaputt', fn () => new CoreMailsFailingTransport);
+    config()->set('mail.mailers.core-kaputt', ['transport' => 'core-kaputt']);
+    config()->set('mail.default', 'core-kaputt');
+    $user = statamicUser();
+
+    expect(fn () => $user->sendPasswordResetNotification('tok-12'))
+        ->toThrow(RuntimeException::class, 'smtp kaputt');
+
+    Log::shouldHaveReceived('error')
+        ->withArgs(fn (string $message, array $context) => ($context['slug'] ?? null) === CoreMails::PASSWORD_RESET
+            && ($context['recipient'] ?? null) === (string) $user->id())
+        ->once();
+});
+
+/** A transport whose delivery always fails, as an SMTP outage would. */
+class CoreMailsFailingTransport extends AbstractTransport
+{
+    protected function doSend(SentMessage $message): void
+    {
+        throw new RuntimeException('smtp kaputt');
+    }
+
+    public function __toString(): string
+    {
+        return 'core-kaputt';
+    }
+}
 
 it('does not touch notifications that are not core account mails', function () {
     coreTemplate(CoreMails::PASSWORD_RESET);

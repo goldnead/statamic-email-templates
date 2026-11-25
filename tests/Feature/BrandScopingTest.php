@@ -497,3 +497,22 @@ it('reads the brand off a template whichever shape the field has', function () {
     expect($controller->read($plain))->toBe('nordlicht');
     expect($controller->read($blank))->toBeNull();
 });
+
+it('runs the callback once when it throws inside a brand switch, and lets the error through', function () {
+    // The catch in runFor() is for the brand switch (unknown handle). An error
+    // inside the callback used to be caught there and the callback run again
+    // outside the brand: the render happened twice and the wrong brand got the
+    // second attempt.
+    fakeBrandContextThatSwitches('nordlicht');
+    $calls = 0;
+
+    $callback = function () use (&$calls) {
+        $calls++;
+
+        throw new RuntimeException('im Callback kaputt');
+    };
+
+    expect(fn () => Brands::runFor('chorwerkstatt', $callback))->toThrow(RuntimeException::class, 'im Callback kaputt');
+
+    expect($calls)->toBe(1);
+});

@@ -56,6 +56,8 @@ class SendCoreMailsFromTemplates
         // `password.reset` route), and an exception leaving this listener
         // would stop the core mail as well. Nobody gets no mail because of a
         // template.
+        $slug = null;
+
         try {
             $match = $this->coreMails->match($event->notifiable, $event->notification);
 
@@ -63,9 +65,12 @@ class SendCoreMailsFromTemplates
                 return null;
             }
 
+            $slug = $match['slug'];
             $mail = $this->render($match['slug'], $match['variables'], $match['subject'], $event->notification::class);
         } catch (Throwable $e) {
             Log::warning('email-templates: a core mail could not be built from its template; the core mail was sent instead.', [
+                'slug' => $slug,
+                'recipient' => $this->recipientId($event->notifiable),
                 'notification' => $event->notification::class,
                 'exception' => $e->getMessage(),
             ]);
@@ -77,7 +82,20 @@ class SendCoreMailsFromTemplates
             return null;
         }
 
-        Notification::sendNow($event->notifiable, $mail, ['mail']);
+        // Not inside the try above: a failed send must not be swallowed. It is
+        // logged with its template and recipient, then thrown on as before.
+        try {
+            Notification::sendNow($event->notifiable, $mail, ['mail']);
+        } catch (Throwable $e) {
+            Log::error('email-templates: the template mail could not be sent.', [
+                'slug' => $match['slug'],
+                'recipient' => $this->recipientId($event->notifiable),
+                'notification' => $event->notification::class,
+                'exception' => $e->getMessage(),
+            ]);
+
+            throw $e;
+        }
 
         // The mail is out. A listener failing now must not turn that into an
         // error page, nor into a retried queue job that sends it twice, and
@@ -94,6 +112,21 @@ class SendCoreMailsFromTemplates
         }
 
         return false;
+    }
+
+    /**
+     * The account id for a log line. Never the address: the id finds the
+     * account, and a log that holds addresses is one more place they leak.
+     */
+    protected function recipientId(mixed $notifiable): ?string
+    {
+        if (! is_object($notifiable) || ! method_exists($notifiable, 'getKey')) {
+            return null;
+        }
+
+        $key = $notifiable->getKey();
+
+        return $key === null ? null : (string) $key;
     }
 
     /**

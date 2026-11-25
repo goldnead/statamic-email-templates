@@ -2,6 +2,7 @@
 
 namespace Goldnead\EmailTemplates\Support;
 
+use Illuminate\Support\Facades\Log;
 use Statamic\Fields\Value;
 use Statamic\Fieldtypes\Bard\Augmentor;
 use Tiptap\Editor;
@@ -23,8 +24,9 @@ class BardHtmlRenderer
 {
     /**
      * @param  mixed  $value  Bard prosemirror nodes (array), an HTML string, or a Statamic Value.
+     * @param  string|null  $handle  Template handle, for the log line when the render fails.
      */
-    public function render(mixed $value): string
+    public function render(mixed $value, ?string $handle = null): string
     {
         if ($value === null) {
             return '';
@@ -44,6 +46,8 @@ class BardHtmlRenderer
 
         // Primary path: Statamic ships tiptap-php (the engine behind Bard).
         // Wrap the stored node list in a prosemirror `doc` and render to HTML.
+        $failure = null;
+
         try {
             if (class_exists(Editor::class)) {
                 $doc = (isset($value['type']) && $value['type'] === 'doc')
@@ -55,7 +59,14 @@ class BardHtmlRenderer
                 ]))->setContent($doc)->getHTML());
             }
         } catch (\Throwable $e) {
-            // fall through to the Statamic augmentor
+            $failure = $e;
+            // Fall through to the Statamic augmentor. Its HTML can differ from
+            // the tiptap one, so the switch itself is worth a line.
+            Log::info('email-templates: the tiptap renderer failed for a Bard body; falling back to the Statamic augmentor.', [
+                'template' => $handle,
+                'exception' => $e::class,
+                'message' => $e->getMessage(),
+            ]);
         }
 
         // Fallback: Statamic's own Bard augmentor prosemirror -> HTML converter.
@@ -65,7 +76,17 @@ class BardHtmlRenderer
                 return $this->prepareUrls((string) $augmentor::convertToHtml($value));
             }
         } catch (\Throwable $e) {
-            // fall through
+            $failure ??= $e;
+        }
+
+        // Both paths failed: the body is empty and the send goes on without it.
+        // Say so, with the template, so the empty body can be traced.
+        if ($failure !== null) {
+            Log::warning('email-templates: a Bard body could not be rendered; the body is sent empty.', [
+                'template' => $handle,
+                'exception' => $failure::class,
+                'message' => $failure->getMessage(),
+            ]);
         }
 
         return '';
