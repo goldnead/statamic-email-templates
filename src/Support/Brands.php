@@ -155,9 +155,21 @@ class Brands
             return $callback();
         }
 
+        // Set once the callback has started. An error from inside the callback
+        // is the caller's to handle: it must not be caught here and run again.
+        $entered = false;
+
         try {
-            return $manager->runFor($handle, $callback);
-        } catch (\Throwable) {
+            return $manager->runFor($handle, function () use ($callback, &$entered) {
+                $entered = true;
+
+                return $callback();
+            });
+        } catch (\Throwable $e) {
+            if ($entered) {
+                throw $e;
+            }
+
             // An unknown or deleted handle is no reason to fail the render: the
             // caller still wants its mail, just without the brand swap.
             return $callback();

@@ -140,7 +140,7 @@ class EmailTemplateResolver
             title: (string) ($entry->value('title') ?? $slug),
             subject: (string) ($entry->value('subject') ?? ''),
             preview: (string) ($entry->value('preview') ?? ''),
-            body: $this->renderer->render($entry->value('body')),
+            body: $this->renderer->render($entry->value('body'), $slug),
             plainText: $entry->value('plain_text') !== null ? (string) $entry->value('plain_text') : null,
             description: $entry->value('description') !== null ? (string) $entry->value('description') : null,
             layout: $entry->value('layout') !== null && (string) $entry->value('layout') !== '' ? (string) $entry->value('layout') : null,

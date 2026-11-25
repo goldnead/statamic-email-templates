@@ -2,6 +2,7 @@
 
 use Goldnead\EmailTemplates\Support\BardHtmlRenderer;
 use Goldnead\EmailTemplates\Support\HtmlToBard;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\URL;
 
 /**
@@ -254,4 +255,18 @@ it('passes a pre-rendered HTML string through unfiltered — the caller owns it'
     $html = '<p>ok</p><script>alert(1)</script>';
 
     expect((new BardHtmlRenderer)->render($html))->toBe($html);
+});
+
+it('logs a failed render with the template handle and the exception, and still returns an empty body', function () {
+    // Sends go on without the body (the fallback is kept), but a silent empty
+    // body is the expensive kind of wrong: nothing says which template broke.
+    Log::spy();
+
+    $html = (new BardHtmlRenderer)->render([['type' => 'paragraph', 'content' => 'kaputt']], 'testhandle');
+
+    expect($html)->toBe('');
+    Log::shouldHaveReceived('warning')
+        ->withArgs(fn (string $message, array $context) => ($context['template'] ?? null) === 'testhandle'
+            && ($context['exception'] ?? '') !== '')
+        ->once();
 });
