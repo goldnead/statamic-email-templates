@@ -3,6 +3,7 @@
 namespace Goldnead\EmailTemplates\Support;
 
 use Goldnead\EmailTemplates\Contracts\EmailTemplateSource;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Imports the file-based email templates owned by goldnead/statamic-marketing.
@@ -36,6 +37,13 @@ class MarketingEmailTemplateSource implements EmailTemplateSource
             $repository = app(self::REPOSITORY);
             $templates = $repository->all();
         } catch (\Throwable $e) {
+            // Installed and bound, but failing: the import would end with
+            // "No file-based templates found" and exit 0.
+            Log::warning('email-templates: the statamic-marketing template source failed and offers nothing to import.', [
+                'exception' => $e::class,
+                'message' => $e->getMessage(),
+            ]);
+
             return [];
         }
 

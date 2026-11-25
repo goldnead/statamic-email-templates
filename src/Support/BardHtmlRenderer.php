@@ -149,7 +149,7 @@ class BardHtmlRenderer
      */
     protected function rewriteAttribute(string $html, string $tag, string $attribute): string
     {
-        return (string) preg_replace_callback(
+        $rewritten = preg_replace_callback(
             '/(<'.$tag.'\b[^>]*?\b'.$attribute.'\s*=\s*)(["\'])(.*?)\2/i',
             function (array $m): string {
                 $value = trim($m[3]);
@@ -164,5 +164,12 @@ class BardHtmlRenderer
             },
             $html
         );
+
+        // A failed pass keeps the HTML as it was: an empty body is worse than a link that stays relative.
+        if ($rewritten === null) {
+            Log::error('email-templates: a link could not be made absolute, the HTML goes out as it was written.', ['tag' => $tag, 'error' => preg_last_error_msg()]);
+        }
+
+        return $rewritten ?? $html;
     }
 }

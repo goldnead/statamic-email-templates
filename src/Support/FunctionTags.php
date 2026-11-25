@@ -2,6 +2,8 @@
 
 namespace Goldnead\EmailTemplates\Support;
 
+use Illuminate\Support\Facades\Log;
+
 /**
  * Tags with parameters: `{{ countdown until="2026-10-01 18:00" }}`.
  *
@@ -44,7 +46,7 @@ class FunctionTags
 
         $names = implode('|', array_map('preg_quote', array_keys(self::TAGS)));
 
-        return (string) preg_replace_callback(
+        $resolved = preg_replace_callback(
             '/\{\{\s*('.$names.')\b([^}]*)\}\}/',
             function (array $m) use ($flat) {
                 $handler = self::TAGS[$m[1]];
@@ -54,6 +56,13 @@ class FunctionTags
             },
             $text
         );
+
+        // A failed pass keeps the text as it was: an empty body is worse than a visible tag.
+        if ($resolved === null) {
+            Log::error('email-templates: the function tags could not be applied, the text goes out with its tags.', ['error' => preg_last_error_msg()]);
+        }
+
+        return $resolved ?? $text;
     }
 
     /**
